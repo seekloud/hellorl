@@ -52,7 +52,6 @@ for i_episode in range(2):
 print('DONE.')
 print('observation:', str(env.observation_space))
 print('action:', str(env.action_space))
-print('action:', str(env.action_space.n))
 print('action:', str(env.action_space.contains(17)))
 print('action:', str(env.action_space.contains(18)))
 
