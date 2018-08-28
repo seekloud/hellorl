@@ -13,9 +13,18 @@ class GameEnv(object):
                                 obs_type=obs_type,
                                 frameskip=frame_skip,
                                 repeat_action_probability=0.05)
+        self.step_count = 0
+        self.gym_env.reset()
+        self.lives = self.gym_env.ale.lives()
 
     def step(self, action):
         observation, reward, done, lives = self.gym_env.step(action)
+        self.step_count += 1
+        if self.lives > lives:
+            # damage = max(10000 - self.step_count * 0.5, 2000)
+            damage = 2000
+            reward -= damage
+        self.lives = lives
         return observation, reward, done, lives
 
     def render(self):
@@ -33,6 +42,8 @@ class GameEnv(object):
         obs = None
         for _ in range(skip_begin_frame):
             obs, _, _, _ = self.gym_env.step(self.gym_env.action_space.sample())
+        self.lives = self.gym_env.ale.lives()
+        self.step_count = 0
         return obs
 
     def close(self):

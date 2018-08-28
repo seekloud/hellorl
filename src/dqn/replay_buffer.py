@@ -22,7 +22,7 @@ actions, and rewards.
 
     """
 
-    def __init__(self, height, width, channel, rng, max_steps=10000, phi_length=4, discount=0.9):
+    def __init__(self, height, width, channel, rng, discount, max_steps=10000, phi_length=4):
         """Construct a DataSet.
 
         Arguments:

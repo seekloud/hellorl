@@ -13,7 +13,7 @@ from src.dqn.player import Player
 
 from src.dqn.game_env import GameEnv
 from src.dqn.replay_buffer import ReplayBuffer
-from src.dqn.q_network import QNetwork
+from src.dqn.q_network import QLearning
 
 
 class Experiment(object):
@@ -26,6 +26,7 @@ class Experiment(object):
     HEIGHT = 160
     CHANNEL = 3
     BUFFER_MAX = 100000
+    DISCOUNT = 0.99
 
     rng = np.random.RandomState()
 
@@ -33,12 +34,13 @@ class Experiment(object):
         self.game = GameEnv(game=self.GAME_NAME,
                             obs_type=self.OBSERVATION_TYPE,
                             frame_skip=self.FRAME_SKIP)
-        self.policy_net = QNetwork()
+        self.policy_net = QLearning()
         self.player = Player(self.game, self.policy_net, Experiment.rng)
         self.replay_buffer = ReplayBuffer(Experiment.WIDTH,
                                           Experiment.HEIGHT,
                                           Experiment.CHANNEL,
                                           Experiment.rng,
+                                          Experiment.DISCOUNT,
                                           Experiment.BUFFER_MAX)
 
     def run(self):
