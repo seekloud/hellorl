@@ -98,12 +98,12 @@ actions, and rewards.
         1, plus img.
 
         """
+        img = img.transpose(2, 0, 1)
         indexes = np.arange(self.top - self.phi_length + 1, self.top)
 
-        phi = np.empty((self.phi_length, self.height, self.width), dtype=floatX)
-        phi[0:self.phi_length - 1] = self.imgs.take(indexes,
-                                                    axis=0,
-                                                    mode='wrap')
+        phi = np.empty((self.phi_length, self.channel, self.height, self.width), dtype=floatX)
+        phi[0:self.phi_length - 1] = self.imgs.take(indexes, axis=0, mode='wrap')
+
         phi[-1] = img
         return phi
 
@@ -122,12 +122,11 @@ batch_size randomly chosen state transitions.
         actions = np.zeros((batch_size, 1), dtype='int32')
         rewards = np.zeros((batch_size, 1), dtype=floatX)
         terminal = np.zeros((batch_size, 1), dtype='bool')
-        R = np.zeros((batch_size, 1), dtype=floatX)
+        rs = np.zeros((batch_size, 1), dtype=floatX)
 
         count = 0
         while count < batch_size:
             # Randomly choose a time step from the replay memory.
-            print('count=%d, batch_size=%d' % (count, batch_size))
             index = self.rng.randint(self.bottom,
                                      self.bottom + self.size - self.phi_length)
 
@@ -153,10 +152,10 @@ batch_size randomly chosen state transitions.
             actions[count] = self.actions.take(end_index, mode='wrap')
             rewards[count] = self.rewards.take(end_index, mode='wrap')
             terminal[count] = self.terminal.take(end_index, mode='wrap')
-            R[count] = self.R.take(end_index, mode='wrap')
+            rs[count] = self.R.take(end_index, mode='wrap')
             count += 1
 
-        return imgs, actions, rewards, terminal, R
+        return imgs, actions, rs, terminal
 
 
 def test1():

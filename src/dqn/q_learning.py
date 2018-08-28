@@ -35,8 +35,13 @@ class QLearning(object):
 
     def choose_action(self, state):
         # action = np.random.randint(0, 18)
+        shape0 = state.shape
+        state = nd.array(state).reshape((1, -1, shape0[-2], shape0[-1]))
+        # print('after state shape:', state.shape)
         out = self.policy_net(state)
-        max_index = nd.argmax(out, axis=0)
+        # print('out:', out)
+        max_index = nd.argmax(out, axis=1)
+        # print('max_index:', max_index)
         action = max_index.astype(np.uint8).asscalar()
         return action
 
@@ -46,7 +51,7 @@ class QLearning(object):
 
         Arguments:
 
-        imgs - b x (f + 1) x C x H x H numpy array, where b is batch size,
+        imgs - b x (f + 1) x C x H x W numpy array, where b is batch size,
                f is num frames, h is height and w is width.
         actions - b x 1 numpy array of integers
         rewards - b x 1 numpy array
@@ -59,8 +64,8 @@ class QLearning(object):
         states = imgs[:, :-1, :, :, :]
         next_states = imgs[:, 1:, :, :, :]
         s = states.shape
-        states = states.reshape((s[0], -1, s[3], s[4]))  # batch x (f x C) x H x H
-        next_states = next_states.reshape((s[0], -1, s[3], s[4]))  # batch x (f x C) x H x H
+        states = states.reshape((s[0], -1, s[-2], s[-1]))  # batch x (f x C) x H x W
+        next_states = next_states.reshape((s[0], -1, s[-2], s[-1]))  # batch x (f x C) x H x W
 
         st = nd.array(states, ctx=self.ctx, dtype=np.float32) / 255.0
         at = nd.array(actions[:, 0], ctx=self.ctx)
@@ -74,9 +79,15 @@ class QLearning(object):
 
         with autograd.record():
             current_qs = self.policy_net(st)
-            current_q = nd.choose_element_0index(current_qs, at)
+            # current_q = nd.choose_element_0index(current_qs, at)
+            current_q = nd.pick(current_qs, at, 1)
             loss = nd.clip(target - current_q, -100, 100)
             total_loss = nd.sum(nd.abs(loss))
+            # print('current_qs:', current_qs.shape, current_qs.dtype)
+            # print('current_q:', current_q.shape, current_q.dtype)
+            # print('loss:', loss.shape, loss.dtype)
+            # print('total_loss:', total_loss.shape, total_loss.dtype)
+
         total_loss.backward()
         self.trainer.step(batch_size)
         return total_loss.asnumpy()
