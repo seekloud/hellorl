@@ -13,28 +13,43 @@ from src.dqn.player import Player
 
 from src.dqn.game_env import GameEnv
 from src.dqn.replay_buffer import ReplayBuffer
-from src.dqn.q_network import QLearning
+from src.dqn.q_learning import QLearning
+from src import utils
+import mxnet as mx
+import mxnet as nd
 
 
 class Experiment(object):
+
+    ctx = utils.try_gpu(0)
+
     GAME_NAME = 'riverraid'
     OBSERVATION_TYPE = 'image'  # image or ram
     FRAME_SKIP = 4
     EPOCH_NUM = 2
     EPOCH_LENGTH = 2000
-    WIDTH = 210
-    HEIGHT = 160
+
+    PHI_LENGTH = 4
     CHANNEL = 3
+    WIDTH = 160
+    HEIGHT = 210
+    INPUT_SAMPLE = nd.random.uniform(0, 255, (PHI_LENGTH, CHANNEL, HEIGHT, WIDTH), ctx=ctx).astype(np.uint8)
+
     BUFFER_MAX = 100000
     DISCOUNT = 0.99
+    RANDOM_SEED = int(time.time() * 1000)
 
-    rng = np.random.RandomState()
+    mx.random.seed(RANDOM_SEED)
+    rng = np.random.RandomState(RANDOM_SEED)
+
 
     def __init__(self):
         self.game = GameEnv(game=self.GAME_NAME,
                             obs_type=self.OBSERVATION_TYPE,
                             frame_skip=self.FRAME_SKIP)
-        self.policy_net = QLearning()
+        self.policy_net = QLearning(Experiment.ctx,
+                                    Experiment.DISCOUNT,
+                                    Experiment.INPUT_SAMPLE)
         self.player = Player(self.game, self.policy_net, Experiment.rng)
         self.replay_buffer = ReplayBuffer(Experiment.WIDTH,
                                           Experiment.HEIGHT,
@@ -43,7 +58,7 @@ class Experiment(object):
                                           Experiment.DISCOUNT,
                                           Experiment.BUFFER_MAX)
 
-    def run(self):
+    def start(self):
         for i in range(1, self.EPOCH_NUM + 1):
             self._run_epoch(i)
         print('experiment done.')
@@ -59,6 +74,6 @@ class Experiment(object):
 
 if __name__ == '__main__':
     exper = Experiment()
-    exper.run()
+    exper.start()
 
     pass

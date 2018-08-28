@@ -7,32 +7,38 @@ import numpy as np
 import mxnet as mx
 from mxnet import init, nd, autograd, gluon
 from mxnet.gluon import data as gdata, nn, loss as gloss
+import time
 
 
 class QLearning(object):
-
-    def __init__(self, ctx, discount=0.99, params_path=None):
+    def __init__(self, ctx, input_sample, discount=0.99, model_file=None):
         self.ctx = ctx
         self.discount = discount
-        self.policy_net = self.get_net(18)
-        self.target_net = self.get_net(18)
+        self.policy_net = self.get_net(18, input_sample)
+        self.target_net = self.get_net(18, input_sample)
+
+        if model_file is not None:
+            print('%s: read trained model from [%s]' % (time.strftime("%Y-%m-%d %H:%M:%S"), model_file))
+            self.policy_net.load_params(model_file, ctx=self.ctx)
+
         self.update_target_net()
 
         learning_rate = 0.05
         weight_decay = 0
 
         self.trainer = gluon.Trainer(self.policy_net.collect_params(), 'adam',
-                                {'learning_rate': learning_rate,
-                                 'wd': weight_decay})
-
+                                     {'learning_rate': learning_rate,
+                                      'wd': weight_decay})
 
     def update_target_net(self):
-        p_params = self.policy_net.collect_params()
-        t_params = self.target_net.collect_params()
-        t_params.update(p_params)
+        copy_params(self.policy_net, self.target_net)
 
     def choose_action(self, state):
-        return np.random.randint(0, 18)
+        # action = np.random.randint(0, 18)
+        out = self.policy_net(state)
+        max_index = nd.argmax(out, axis=0)
+        action = max_index.astype(np.uint8).asscalar()
+        return action
 
     def train_policy_net(self, imgs, actions, rs, terminals):
         """
@@ -73,19 +79,19 @@ class QLearning(object):
             total_loss = nd.sum(nd.abs(loss))
         total_loss.backward()
         self.trainer.step(batch_size)
-
         return total_loss.asnumpy()
-
-    def copy_params_from(self, other_net):
-        pass
 
     def q_vals(self, sample_batch):
         pass
 
-    def save_params_to_file(self, path):
-        pass
+    def save_params_to_file(self, model_path, mark):
+        time_mark = time.strftime("%Y%m%d_%H%M%S")
+        filename = model_path + '/net_params_' + str(mark) + '_' + time_mark + '.model'
+        print(time.strftime("%Y-%m-%d %H:%M:%S"), ': begin save model to ' + filename)
+        self.policy_net.save_params(filename)
+        print(time.strftime("%Y-%m-%d %H:%M:%S"), ', save model success:', filename)
 
-    def get_net(self, action_num):
+    def get_net(self, action_num, input_sample):
         net = nn.Sequential()
         with net.name_scope():
             net.add(
@@ -97,7 +103,9 @@ class QLearning(object):
                 nn.Dense(action_num)
             )
         net.initialize(init.Xavier(), ctx=self.ctx)
+        net(input_sample)
         return net
+
 
 transform_test = gdata.vision.transforms.Compose([
     gdata.vision.transforms.ToTensor(),
@@ -106,5 +114,11 @@ transform_test = gdata.vision.transforms.Compose([
 ])
 
 
-def getNet():
-    pass
+def copy_params(src_net, dst_net):
+    ps_src = src_net.collect_params()
+    ps_dst = dst_net.collect_params()
+    prefix_length = len(src_net.prefix)
+    for k, v in ps_src.items():
+        k = k[prefix_length:]
+        v_dst = ps_dst.get(k)
+        v_dst.set_data(v.data())
