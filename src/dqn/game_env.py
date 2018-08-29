@@ -23,7 +23,7 @@ class GameEnv(object):
         self.step_count += 1
         if self.lives > new_lives:
             # damage = max(10000 - self.step_count * 0.5, 2000)
-            damage = 2000
+            damage = 50
             reward -= damage
         self.lives = new_lives
         return observation, reward, done, new_lives

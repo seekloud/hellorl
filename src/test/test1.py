@@ -20,7 +20,6 @@ def copy_params(src_net, dst_net):
         v_dst.set_data(v.data())
 
 
-
 def test_net_paras_copy():
     net1 = get_net(10)
     net2 = get_net(10)
@@ -105,5 +104,32 @@ def get_net(action_num):
         return net
 
 
+from src.dqn.replay_buffer import ReplayBuffer
+import numpy as np
+
+
+def test_replay_buffer():
+    rng = np.random.RandomState()
+    buffer = ReplayBuffer(5, 6, 3, rng, 0.9, 30)
+    img = np.arange(0, 90).reshape((5,6,3))
+    buffer.add_sample(img, 0, 0, False )
+    buffer.add_sample(img, 1, 10, False )
+    buffer.add_sample(img, 2, 0, False )
+    buffer.add_sample(img, 3, 0, False )
+    buffer.add_sample(img, 4, 10, False )
+    buffer.add_sample(img, 4, 0, False )
+    buffer.add_sample(img, 4, 0, False )
+    buffer.add_sample(img, 4, -1, False )
+    buffer.add_sample(img, 4, 0, False )
+    buffer.add_sample(img, 5, 10, False )
+    buffer.add_sample(img, 6, -1, True )
+
+    print(buffer.actions)
+    print(buffer.rewards)
+    print(buffer.R)
+
+    pass
+
+
 if __name__ == '__main__':
-    test_net_paras_copy()
+    test_replay_buffer()

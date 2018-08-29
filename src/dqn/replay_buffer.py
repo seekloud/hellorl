@@ -126,6 +126,12 @@ batch_size randomly chosen state transitions.
 
         count = 0
         while count < batch_size:
+            # print('count:', count)
+            # print('batch_size:', batch_size)
+            # print('self.bottom:', self.bottom)
+            # print('self.size:', self.size)
+            # print('self.phi_length:', self.phi_length)
+
             # Randomly choose a time step from the replay memory.
             index = self.rng.randint(self.bottom,
                                      self.bottom + self.size - self.phi_length)

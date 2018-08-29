@@ -36,7 +36,7 @@ class QLearning(object):
     def choose_action(self, state):
         # action = np.random.randint(0, 18)
         shape0 = state.shape
-        state = nd.array(state).reshape((1, -1, shape0[-2], shape0[-1]))
+        state = nd.array(state, ctx=self.ctx).reshape((1, -1, shape0[-2], shape0[-1]))
         # print('after state shape:', state.shape)
         out = self.policy_net(state)
         # print('out:', out)
