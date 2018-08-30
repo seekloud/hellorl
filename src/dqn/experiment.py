@@ -52,6 +52,8 @@ class Experiment(object):
                                           Experiment.rng,
                                           DISCOUNT,
                                           BUFFER_MAX)
+        self.last_update_target_step = 0
+
 
     def start_train(self):
         for i in range(1, EPOCH_NUM + 1):
@@ -69,7 +71,6 @@ class Experiment(object):
     def _run_epoch(self, epoch, testing=False, render=False):
         steps_left = EPOCH_LENGTH
         random_action = True
-        last_update_target_step = 0
         while steps_left > 0:
             if self.step_count > BEGIN_RANDOM_STEP:
                 random_action = False
@@ -85,8 +86,8 @@ class Experiment(object):
                   % (self.episode_count, ep_steps, self.step_count, (t1 - t0), int(ep_reward), avg_loss))
             print('')
 
-            if not testing and self.step_count - last_update_target_step > UPDATE_TARGET_PER_STEP and not random_action:
-                last_update_target_step = self.step_count
+            if not testing and self.step_count - self.last_update_target_step > UPDATE_TARGET_PER_STEP and not random_action:
+                self.last_update_target_step = self.step_count
                 print('-- -- update_target_net total_step=%d' % self.step_count)
                 self.q_learning.update_target_net()
 
