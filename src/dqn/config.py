@@ -7,8 +7,8 @@
 import time
 
 GAME_NAME = 'riverraid'
-PRE_TRAIN_MODEL_FILE = None
-# PRE_TRAIN_MODEL_FILE = '/home/zhangtao/model_file/hello_rl/net_params_test1_173351_20180829_175448.model'
+# PRE_TRAIN_MODEL_FILE = None
+PRE_TRAIN_MODEL_FILE = '/home/zhangtao/model_file/hello_rl/net_params_test1_114009_20180830_115830.model'
 # PRE_TRAIN_MODEL_FILE = 'D:\data\\rl\\net_params_test1_175536_20180829_182429.model'
 OBSERVATION_TYPE = 'image'  # image or ram
 FRAME_SKIP = 4
@@ -37,8 +37,15 @@ if PRE_TRAIN_MODEL_FILE is not None:
     EPSILON_DECAY = 20000
 
 TRAIN_PER_STEP = 4
-UPDATE_TARGET_PER_STEP = 10000
+UPDATE_TARGET_PER_STEP = 30000
 
 MODEL_PATH = '/home/zhangtao/model_file/hello_rl'
 
-BEGIN_TIME = time.strftime("%H%M%S")
+BEGIN_TIME = time.strftime("%Y%m%d_%H%M%S")
+
+
+print('\n\n\n\n++++++++++++++++ edited time: 1204 ++++++++++++++++++')
+
+
+
+

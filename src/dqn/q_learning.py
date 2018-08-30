@@ -23,12 +23,13 @@ class QLearning(object):
 
         self.update_target_net()
 
-        learning_rate = 0.05
-        weight_decay = 0
+        learning_rate = 0.02
+        weight_decay = 0.0
 
         self.trainer = gluon.Trainer(self.policy_net.collect_params(), 'adam',
                                      {'learning_rate': learning_rate,
                                       'wd': weight_decay})
+        self.loss_func = gluon.loss.L2Loss()
 
     def update_target_net(self):
         copy_params(self.policy_net, self.target_net)
@@ -81,16 +82,22 @@ class QLearning(object):
             current_qs = self.policy_net(st)
             # current_q = nd.choose_element_0index(current_qs, at)
             current_q = nd.pick(current_qs, at, 1)
-            loss = nd.clip(target - current_q, -100, 100)
-            total_loss = nd.sum(nd.abs(loss))
+
+            # loss = nd.clip(target - current_q, -1, 1)
+            loss = self.loss_func(target, current_q)
             # print('current_qs:', current_qs.shape, current_qs.dtype)
             # print('current_q:', current_q.shape, current_q.dtype)
             # print('loss:', loss.shape, loss.dtype)
             # print('total_loss:', total_loss.shape, total_loss.dtype)
-
-        total_loss.backward()
+        loss.backward()
         self.trainer.step(batch_size)
-        return total_loss.asnumpy()
+        total_loss = loss.mean().asscalar()
+
+        # print('total_loss:', loss)
+        # print('total_loss_avg:', loss.mean())
+        # print('')
+
+        return total_loss
 
     def q_vals(self, sample_batch):
         pass

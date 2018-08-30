@@ -53,7 +53,7 @@ class Player(object):
                 loss = self.q_learning.train_policy_net(imgs, actions, rs, terminal)
                 loss_sum += loss
                 train_count += 1
-        return episode_step, episode_reword, loss_sum * 1.0 / (train_count + 0.00001)
+        return episode_step, episode_reword, loss_sum / (train_count + 0.00001)
 
     def _choose_action(self, img, replay_buffer):
         self.epsilon = max(self.epsilon_min, self.epsilon - self.epsilon_rate)

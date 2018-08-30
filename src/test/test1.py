@@ -4,10 +4,55 @@
 # FileName: test1.py
 
 import mxnet as mx
-from mxnet import init, nd
+from mxnet import init, nd, gluon
 from mxnet.gluon import nn
 
+
 ctx = mx.cpu()
+import numpy
+
+
+
+class DQNOutput(mx.operator.CustomOp):
+    def __init__(self):
+        super(DQNOutput, self).__init__()
+
+    def forward(self, is_train, req, in_data, out_data, aux):
+        self.assign(out_data[0], req[0], in_data[0])
+
+    def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+        # TODO Backward using NDArray will cause some troubles see `https://github.com/dmlc/mxnet/issues/1720'
+        x = out_data[0].asnumpy()
+        action = in_data[1].asnumpy().astype(numpy.int)
+        reward = in_data[2].asnumpy()
+        dx = in_grad[0]
+        ret = numpy.zeros(shape=dx.shape, dtype=numpy.float32)
+        ret[numpy.arange(action.shape[0]), action] \
+            = numpy.clip(x[numpy.arange(action.shape[0]), action] - reward, -1, 1)
+        self.assign(dx, req[0], ret)
+
+
+@mx.operator.register("DQNOutput")
+class DQNOutputProp(mx.operator.CustomOpProp):
+    def __init__(self):
+        super(DQNOutputProp, self).__init__(need_top_grad=False)
+
+    def list_arguments(self):
+        return ['data', 'action', 'reward']
+
+    def list_outputs(self):
+        return ['output']
+
+    def infer_shape(self, in_shape):
+        data_shape = in_shape[0]
+        action_shape = (in_shape[0][0],)
+        reward_shape = (in_shape[0][0],)
+        output_shape = in_shape[0]
+        return [data_shape, action_shape, reward_shape], [output_shape], []
+
+    def create_operator(self, ctx, shapes, dtypes):
+        return DQNOutput()
+
 
 
 def copy_params(src_net, dst_net):
