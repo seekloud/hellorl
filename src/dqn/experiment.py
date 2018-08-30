@@ -75,7 +75,7 @@ class Experiment(object):
             if self.step_count > BEGIN_RANDOM_STEP:
                 random_action = False
             t0 = time.time()
-            ep_steps, ep_reward, avg_loss = self.player.run_episode(epoch, steps_left, self.replay_buffer,
+            ep_steps, ep_reward, avg_loss = self.player.run_episode(epoch, self.replay_buffer,
                                                                     render=render,
                                                                     random_action=random_action, testing=testing)
             t1 = time.time()

@@ -7,8 +7,8 @@
 import time
 
 GAME_NAME = 'riverraid'
-# PRE_TRAIN_MODEL_FILE = None
-PRE_TRAIN_MODEL_FILE = '/home/zhangtao/model_file/hello_rl/net_params_test1_20180830_120503_20180830_121921.model'
+PRE_TRAIN_MODEL_FILE = None
+# PRE_TRAIN_MODEL_FILE = '/home/zhangtao/model_file/hello_rl/net_params_test1_20180830_122510_20180830_131106.model'
 # PRE_TRAIN_MODEL_FILE = 'D:\data\\rl\\net_params_test1_175536_20180829_182429.model'
 OBSERVATION_TYPE = 'image'  # image or ram
 FRAME_SKIP = 4
@@ -22,7 +22,7 @@ HEIGHT = 210
 
 BEGIN_RANDOM_STEP = 10000
 
-BUFFER_MAX = 20000
+BUFFER_MAX = 80000
 #BUFFER_MAX = 200000
 DISCOUNT = 0.99
 RANDOM_SEED = int(time.time() * 1000) % 100000000
@@ -37,14 +37,14 @@ if PRE_TRAIN_MODEL_FILE is not None:
     EPSILON_DECAY = 20000
 
 TRAIN_PER_STEP = 4
-UPDATE_TARGET_PER_STEP = 40000
+UPDATE_TARGET_PER_STEP = 15000
 
 MODEL_PATH = '/home/zhangtao/model_file/hello_rl'
 
 BEGIN_TIME = time.strftime("%Y%m%d_%H%M%S")
 
 
-print('\n\n\n\n++++++++++++++++ edited time: 1224 ++++++++++++++++++')
+print('\n\n\n\n++++++++++++++++ edited time: 1728 ++++++++++++++++++')
 
 
 

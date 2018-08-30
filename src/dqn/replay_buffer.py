@@ -79,7 +79,7 @@ actions, and rewards.
                 idx -= 1
                 if self.terminal[idx]:
                     break
-                self.R[idx] = self.R[idx + 1] + self.rewards[idx] * self.discount
+                self.R[idx] = self.R[idx + 1] * self.discount + self.rewards[idx]# fix bug
 
         if self.size == self.max_steps:
             self.bottom = (self.bottom + 1) % self.max_steps
@@ -122,7 +122,7 @@ batch_size randomly chosen state transitions.
         actions = np.zeros((batch_size, 1), dtype='int32')
         rewards = np.zeros((batch_size, 1), dtype=floatX)
         terminal = np.zeros((batch_size, 1), dtype='bool')
-        rs = np.zeros((batch_size, 1), dtype=floatX)
+        R = np.zeros((batch_size, 1), dtype=floatX)
 
         count = 0
         while count < batch_size:
@@ -158,10 +158,10 @@ batch_size randomly chosen state transitions.
             actions[count] = self.actions.take(end_index, mode='wrap')
             rewards[count] = self.rewards.take(end_index, mode='wrap')
             terminal[count] = self.terminal.take(end_index, mode='wrap')
-            rs[count] = self.R.take(end_index, mode='wrap')
+            R[count] = self.R.take(end_index, mode='wrap')
             count += 1
 
-        return imgs, actions, rs, terminal
+        return imgs, actions, rewards, terminal
 
 
 def test1():

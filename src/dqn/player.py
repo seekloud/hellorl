@@ -17,7 +17,7 @@ class Player(object):
         self.epsilon_min = EPSILON_MIN
         self.epsilon_rate = (EPSILON_START - EPSILON_MIN) * 1.0 / EPSILON_DECAY
 
-    def run_episode(self, epoch, max_steps, replay_buffer, render=False, random_action=False, testing=False):
+    def run_episode(self, epoch, replay_buffer, render=False, random_action=False, testing=False):
         episode_step = 0
         episode_reword = 0
         train_count = 0
@@ -30,8 +30,7 @@ class Player(object):
                 action = self._choose_action(st, replay_buffer)
 
             next_st, reward, episode_done, lives = self.game.step(action)
-            terminal = episode_done or episode_step >= max_steps
-
+            terminal = episode_done
             replay_buffer.add_sample(st, action, reward, terminal)
             episode_step += 1
             episode_reword += reward

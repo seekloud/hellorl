@@ -7,10 +7,8 @@ import mxnet as mx
 from mxnet import init, nd, gluon
 from mxnet.gluon import nn
 
-
 ctx = mx.cpu()
 import numpy
-
 
 
 class DQNOutput(mx.operator.CustomOp):
@@ -52,7 +50,6 @@ class DQNOutputProp(mx.operator.CustomOpProp):
 
     def create_operator(self, ctx, shapes, dtypes):
         return DQNOutput()
-
 
 
 def copy_params(src_net, dst_net):
@@ -155,19 +152,19 @@ import numpy as np
 
 def test_replay_buffer():
     rng = np.random.RandomState()
-    buffer = ReplayBuffer(5, 6, 3, rng, 0.9, 30)
-    img = np.arange(0, 90).reshape((5,6,3))
-    buffer.add_sample(img, 0, 0, False )
-    buffer.add_sample(img, 1, 10, False )
-    buffer.add_sample(img, 2, 0, False )
-    buffer.add_sample(img, 3, 0, False )
-    buffer.add_sample(img, 4, 10, False )
-    buffer.add_sample(img, 4, 0, False )
-    buffer.add_sample(img, 4, 0, False )
-    buffer.add_sample(img, 4, -1, False )
-    buffer.add_sample(img, 4, 0, False )
-    buffer.add_sample(img, 5, 10, False )
-    buffer.add_sample(img, 6, -1, True )
+    buffer = ReplayBuffer(5, 6, 3, rng, 0.5, 30)
+    img = np.arange(0, 90).reshape((5, 6, 3))
+    buffer.add_sample(img, 0, 0, False)
+    buffer.add_sample(img, 1, 10, False)
+    buffer.add_sample(img, 2, 0, False)
+    buffer.add_sample(img, 3, 0, False)
+    buffer.add_sample(img, 4, 10, False)
+    buffer.add_sample(img, 4, -1, False)
+    buffer.add_sample(img, 4, 0, False)
+    buffer.add_sample(img, 4, 0, False)
+    buffer.add_sample(img, 4, 0, False)
+    buffer.add_sample(img, 5, 10, False)
+    buffer.add_sample(img, 6, -1, True)
 
     print(buffer.actions)
     print(buffer.rewards)
