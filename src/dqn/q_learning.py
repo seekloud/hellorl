@@ -35,14 +35,10 @@ class QLearning(object):
         copy_params(self.policy_net, self.target_net)
 
     def choose_action(self, state):
-        # action = np.random.randint(0, 18)
         shape0 = state.shape
         state = nd.array(state, ctx=self.ctx).reshape((1, -1, shape0[-2], shape0[-1]))
-        # print('after state shape:', state.shape)
         out = self.policy_net(state)
-        # print('out:', out)
         max_index = nd.argmax(out, axis=1)
-        # print('max_index:', max_index)
         action = max_index.astype(np.uint8).asscalar()
         return action
 
@@ -80,23 +76,11 @@ class QLearning(object):
 
         with autograd.record():
             current_qs = self.policy_net(st)
-            # current_q = nd.choose_element_0index(current_qs, at)
             current_q = nd.pick(current_qs, at, 1)
-
-            # loss = nd.clip(target - current_q, -1, 1)
             loss = self.loss_func(target, current_q)
-            # print('current_qs:', current_qs.shape, current_qs.dtype)
-            # print('current_q:', current_q.shape, current_q.dtype)
-            # print('loss:', loss.shape, loss.dtype)
-            # print('total_loss:', total_loss.shape, total_loss.dtype)
         loss.backward()
         self.trainer.step(batch_size)
         total_loss = loss.mean().asscalar()
-
-        # print('total_loss:', loss)
-        # print('total_loss_avg:', loss.mean())
-        # print('')
-
         return total_loss
 
     def q_vals(self, sample_batch):

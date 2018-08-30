@@ -24,8 +24,6 @@ class Player(object):
         loss_sum = 0
         st = self.game.reset()
         while True:
-            # print('run_episode step: %d' % (episode_step))
-
             if not testing and random_action:
                 action = self.game.random_action()
             else:
@@ -46,10 +44,6 @@ class Player(object):
             if not testing and episode_step % TRAIN_PER_STEP == 0 and not random_action:
                 # print('-- train_policy_net episode_step=%d' % episode_step)
                 imgs, actions, rs, terminal = replay_buffer.random_batch(32)
-                # print('img:', imgs.shape, imgs.dtype)
-                # print('actions:', actions.shape, actions.dtype)
-                # print('rs:', rs.shape, rs.dtype)
-                # print('terminal:', terminal.shape, terminal.dtype)
                 loss = self.q_learning.train_policy_net(imgs, actions, rs, terminal)
                 loss_sum += loss
                 train_count += 1

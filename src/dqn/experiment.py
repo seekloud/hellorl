@@ -27,9 +27,6 @@ class Experiment(object):
 
     INPUT_SAMPLE = nd.random.uniform(0, 255, (1, PHI_LENGTH * CHANNEL, HEIGHT, WIDTH), ctx=ctx) / 255.0
 
-    # print('input:', type(INPUT_SAMPLE))
-    # print('input:', INPUT_SAMPLE)
-
     mx.random.seed(RANDOM_SEED)
     rng = np.random.RandomState(RANDOM_SEED)
 
@@ -77,8 +74,9 @@ class Experiment(object):
             if self.step_count > BEGIN_RANDOM_STEP:
                 random_action = False
             t0 = time.time()
-            ep_steps, ep_reward, avg_loss = self.player.run_episode(epoch, steps_left, self.replay_buffer, render=render,
-                                                          random_action=random_action, testing=testing)
+            ep_steps, ep_reward, avg_loss = self.player.run_episode(epoch, steps_left, self.replay_buffer,
+                                                                    render=render,
+                                                                    random_action=random_action, testing=testing)
             t1 = time.time()
             self.step_count += ep_steps
             self.episode_count += 1
@@ -102,10 +100,12 @@ def train():
     exper = Experiment()
     exper.start_train()
 
+
 def test():
     print(' ====================== START test ========================')
     exper = Experiment()
     exper.start_test()
+
 
 if __name__ == '__main__':
     train()
