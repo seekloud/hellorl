@@ -20,11 +20,12 @@ class GameEnv(object):
     def step(self, action):
         observation, reward, done, _ = self.gym_env.step(action)
         new_lives = self.gym_env.ale.lives()
+
+        reward = min(0.1, max(-0.1, reward))
         self.step_count += 1
         if self.lives > new_lives:
             # damage = max(10000 - self.step_count * 0.5, 2000)
-            damage = 0
-            reward -= damage
+            reward = -1
         self.lives = new_lives
         return observation, reward, done, new_lives
 

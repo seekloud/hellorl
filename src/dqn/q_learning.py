@@ -12,11 +12,12 @@ import src.utils as g_utils
 
 clipping_theta = 0.01
 
+from src.dqn.config import DISCOUNT
+
 
 class QLearning(object):
-    def __init__(self, ctx, input_sample, discount=0.99, model_file=None):
+    def __init__(self, ctx, input_sample, model_file=None):
         self.ctx = ctx
-        self.discount = discount
         self.policy_net = self.get_net(18, input_sample)
         self.target_net = self.get_net(18, input_sample)
 
@@ -26,10 +27,11 @@ class QLearning(object):
 
         self.update_target_net()
 
-        learning_rate = 0.02
+        learning_rate = 0.002
         weight_decay = 0.0
 
-        self.trainer = gluon.Trainer(self.policy_net.collect_params(), 'adam',
+        #adagrad
+        self.trainer = gluon.Trainer(self.policy_net.collect_params(), 'adagrad',
                                      {'learning_rate': learning_rate,
                                       'wd': weight_decay})
         self.loss_func = gluon.loss.L2Loss()
@@ -75,7 +77,7 @@ class QLearning(object):
 
         next_qs = self.target_net(st1)
         next_q_out = nd.max(next_qs, axis=1)
-        target = rt + next_q_out * (1.0 - tt) * self.discount
+        target = rt + next_q_out * (1.0 - tt) * DISCOUNT
 
         with autograd.record():
             current_qs = self.policy_net(st)

@@ -15,6 +15,8 @@ import time
 
 floatX = 'float32'
 
+from src.dqn.config import DISCOUNT
+
 
 class ReplayBuffer(object):
     """A replay memory consisting of circular buffers for observed images,
@@ -22,7 +24,7 @@ actions, and rewards.
 
     """
 
-    def __init__(self, height, width, channel, rng, discount, max_steps=10000, phi_length=4):
+    def __init__(self, height, width, channel, rng, max_steps=10000, phi_length=4):
         """Construct a DataSet.
 
         Arguments:
@@ -41,7 +43,6 @@ actions, and rewards.
         self.height = height
         self.channel = channel
         self.max_steps = max_steps
-        self.discount = discount
         self.phi_length = phi_length
         self.rng = rng
 
@@ -80,7 +81,7 @@ actions, and rewards.
                 idx -= 1
                 if self.terminal[idx]:
                     break
-                self.R[idx] = self.R[idx + 1] * self.discount + self.rewards[idx]  # fix bug
+                self.R[idx] = self.R[idx + 1] * DISCOUNT + self.rewards[idx]  # fix bug
 
         if self.size == self.max_steps:
             self.bottom = (self.bottom + 1) % self.max_steps

@@ -37,12 +37,12 @@ class Experiment(object):
         self.target_net_update_count = 0
         self.q_learning = QLearning(Experiment.ctx,
                                     Experiment.INPUT_SAMPLE,
-                                    DISCOUNT,
                                     model_file=PRE_TRAIN_MODEL_FILE
                                     )
         self.game = GameEnv(game=GAME_NAME,
                             obs_type=OBSERVATION_TYPE,
                             frame_skip=FRAME_SKIP)
+
         self.player = Player(self.game,
                              self.q_learning,
                              Experiment.rng)
@@ -51,7 +51,6 @@ class Experiment(object):
                                           WIDTH,
                                           CHANNEL,
                                           Experiment.rng,
-                                          DISCOUNT,
                                           BUFFER_MAX)
         self.update_target_episode = UPDATE_TARGET_BY_EPISODE_BEGIN
         self.update_target_interval = UPDATE_TARGET_BY_EPISODE_BEGIN + UPDATE_TARGET_RATE

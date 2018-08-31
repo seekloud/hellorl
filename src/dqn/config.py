@@ -24,7 +24,7 @@ BEGIN_RANDOM_STEP = 1000
 
 BUFFER_MAX = 50000
 # BUFFER_MAX = 200000
-DISCOUNT = 0.99
+DISCOUNT = 0.90
 RANDOM_SEED = int(time.time() * 1000) % 100000000
 EPSILON_MIN = 0.15
 EPSILON_START = 1.0
@@ -49,4 +49,4 @@ MODEL_PATH = '/home/zhangtao/model_file/hello_rl'
 
 BEGIN_TIME = time.strftime("%Y%m%d_%H%M%S")
 
-print('\n\n\n\n++++++++++++++++ edited time: 17:13 ++++++++++++++++++')
+print('\n\n\n\n++++++++++++++++ edited time: 18:01 ++++++++++++++++++')
