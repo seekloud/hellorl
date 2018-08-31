@@ -23,6 +23,12 @@ class Player(object):
         train_count = 0
         loss_sum = 0
         st = self.game.reset()
+
+        # do no operation steps.
+        max_no_op_steps = 20
+        for _ in range(self.rng.randint(10, max_no_op_steps)):
+            self.game.step(0)
+
         while True:
             if not testing and random_action:
                 action = self.game.random_action()

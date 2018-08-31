@@ -68,7 +68,8 @@ actions, and rewards.
         """
         self.imgs[self.top] = img.transpose(2, 0, 1)
         self.actions[self.top] = action
-        self.rewards[self.top] = reward
+        # self.rewards[self.top] = max(1, min(-1, reward))  # clip reward
+        self.rewards[self.top] = reward  # clip reward
         self.terminal[self.top] = terminal
         self.R[self.top] = -1000.0
 
@@ -79,7 +80,7 @@ actions, and rewards.
                 idx -= 1
                 if self.terminal[idx]:
                     break
-                self.R[idx] = self.R[idx + 1] * self.discount + self.rewards[idx]# fix bug
+                self.R[idx] = self.R[idx + 1] * self.discount + self.rewards[idx]  # fix bug
 
         if self.size == self.max_steps:
             self.bottom = (self.bottom + 1) % self.max_steps

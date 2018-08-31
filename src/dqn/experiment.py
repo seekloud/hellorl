@@ -30,10 +30,11 @@ class Experiment(object):
     mx.random.seed(RANDOM_SEED)
     rng = np.random.RandomState(RANDOM_SEED)
 
-    def __init__(self):
+    def __init__(self, testing=False):
         ztutils.mkdir_if_not_exist(MODEL_PATH)
         self.step_count = 0
         self.episode_count = 0
+        self.target_net_update_count = 0
         self.q_learning = QLearning(Experiment.ctx,
                                     Experiment.INPUT_SAMPLE,
                                     DISCOUNT,
@@ -52,8 +53,9 @@ class Experiment(object):
                                           Experiment.rng,
                                           DISCOUNT,
                                           BUFFER_MAX)
-        self.last_update_target_step = 0
-
+        self.update_target_episode = UPDATE_TARGET_BY_EPISODE_BEGIN
+        self.update_target_interval = UPDATE_TARGET_BY_EPISODE_BEGIN
+        self.testing = testing
 
     def start_train(self):
         for i in range(1, EPOCH_NUM + 1):
@@ -64,35 +66,59 @@ class Experiment(object):
     def start_test(self):
         assert PRE_TRAIN_MODEL_FILE is not None
         for i in range(1, EPOCH_NUM + 1):
-            self._run_epoch(i, testing=True, render=True)
+            self._run_epoch(i, render=True)
         print('test done.')
         self.game.close()
 
-    def _run_epoch(self, epoch, testing=False, render=False):
+    def _run_epoch(self, epoch, render=False):
         steps_left = EPOCH_LENGTH
         random_action = True
+        episode_in_epoch = 0
+        step_in_epoch = 0
+        reward_in_epoch = 0
         while steps_left > 0:
             if self.step_count > BEGIN_RANDOM_STEP:
                 random_action = False
             t0 = time.time()
-            ep_steps, ep_reward, avg_loss = self.player.run_episode(epoch, self.replay_buffer,
+            ep_steps, ep_reward, avg_loss = self.player.run_episode(epoch,
+                                                                    self.replay_buffer,
                                                                     render=render,
-                                                                    random_action=random_action, testing=testing)
-            t1 = time.time()
+                                                                    random_action=random_action,
+                                                                    testing=self.testing)
+
             self.step_count += ep_steps
-            self.episode_count += 1
-            steps_left -= ep_steps
+            if not random_action:
+                self.episode_count += 1
+                episode_in_epoch += 1
+                step_in_epoch += ep_steps
+                reward_in_epoch += ep_reward
+                steps_left -= ep_steps
+            t1 = time.time()
+
             print('++++++ episode [%d] finish, episode step=%d, total_step=%d, time=%f s, ep_reward=%d, avg_loss=%f'
                   % (self.episode_count, ep_steps, self.step_count, (t1 - t0), int(ep_reward), avg_loss))
             print('')
+            self._update_target_net(random_action)
 
-            if not testing and self.step_count - self.last_update_target_step > UPDATE_TARGET_PER_STEP and not random_action:
-                self.last_update_target_step = self.step_count
-                print('-- -- update_target_net total_step=%d' % self.step_count)
-                self.q_learning.update_target_net()
+        self._save_net()
+        print('\n#########  epoch [%d] finish, episode=%d, step=%d, avg_step=%d, avg_reward=%f \n\n\n' %
+              (epoch, self.episode_count, self.step_count, step_in_epoch // episode_in_epoch,
+               reward_in_epoch / episode_in_epoch))
 
-        print('#####  epoch [%d] finish, episode=%d, step=%d \n\n' % (epoch, self.episode_count, self.step_count))
-        if not testing:
+    def _update_target_net(self, random_action=False):
+        if not self.testing and self.episode_count == self.update_target_episode and not random_action:
+            self.target_net_update_count += 1
+            print('%s UPDATE TARGET NET, interval[%d], update count[%d]\n' % (
+                time.strftime("%Y-%m-%d %H:%M:%S"), self.update_target_interval, self.target_net_update_count))
+
+            self.update_target_episode += self.update_target_interval
+            self.update_target_interval = min((self.update_target_interval + UPDATE_TARGET_RATE),
+                                              UPDATE_TARGET_BY_EPISODE_END)
+
+            self.q_learning.update_target_net()
+
+    def _save_net(self):
+        if not self.testing:
             self.q_learning.save_params_to_file(MODEL_PATH, 'test1_' + BEGIN_TIME)
 
 
@@ -104,7 +130,7 @@ def train():
 
 def test():
     print(' ====================== START test ========================')
-    exper = Experiment()
+    exper = Experiment(testing=True)
     exper.start_test()
 
 

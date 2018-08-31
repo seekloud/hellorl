@@ -8,6 +8,9 @@ import mxnet as mx
 from mxnet import init, nd, autograd, gluon
 from mxnet.gluon import data as gdata, nn, loss as gloss
 import time
+import src.utils as g_utils
+
+clipping_theta = 0.01
 
 
 class QLearning(object):
@@ -79,6 +82,10 @@ class QLearning(object):
             current_q = nd.pick(current_qs, at, 1)
             loss = self.loss_func(target, current_q)
         loss.backward()
+        # 梯度裁剪
+        params = [p.data() for p in self.policy_net.collect_params().values()]
+        g_utils.grad_clipping(params, clipping_theta, self.ctx)
+
         self.trainer.step(batch_size)
         total_loss = loss.mean().asscalar()
         return total_loss
@@ -97,9 +104,9 @@ class QLearning(object):
         net = nn.Sequential()
         with net.name_scope():
             net.add(
-                nn.Conv2D(channels=32, kernel_size=8, strides=4, padding=4, activation='relu'),
-                nn.Conv2D(channels=64, kernel_size=4, strides=2, padding=2, activation='relu'),
-                nn.Conv2D(channels=64, kernel_size=3, strides=1, padding=1, activation='relu'),
+                nn.Conv2D(channels=32, kernel_size=8, strides=4, activation='relu'),
+                nn.Conv2D(channels=64, kernel_size=4, strides=2, activation='relu'),
+                nn.Conv2D(channels=64, kernel_size=3, strides=1, activation='relu'),
                 nn.Flatten(),
                 nn.Dense(512, activation="relu"),
                 nn.Dense(action_num)
