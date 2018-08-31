@@ -54,7 +54,7 @@ class Experiment(object):
                                           DISCOUNT,
                                           BUFFER_MAX)
         self.update_target_episode = UPDATE_TARGET_BY_EPISODE_BEGIN
-        self.update_target_interval = UPDATE_TARGET_BY_EPISODE_BEGIN
+        self.update_target_interval = UPDATE_TARGET_BY_EPISODE_BEGIN + UPDATE_TARGET_RATE
         self.testing = testing
 
     def start_train(self):
@@ -111,7 +111,7 @@ class Experiment(object):
             print('%s UPDATE TARGET NET, interval[%d], update count[%d]\n' % (
                 time.strftime("%Y-%m-%d %H:%M:%S"), self.update_target_interval, self.target_net_update_count))
 
-            self.update_target_episode += self.update_target_interval
+            self.update_target_episode = int(self.update_target_episode + self.update_target_interval)
             self.update_target_interval = min((self.update_target_interval + UPDATE_TARGET_RATE),
                                               UPDATE_TARGET_BY_EPISODE_END)
 
