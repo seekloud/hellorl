@@ -23,7 +23,7 @@ from src.dqn.config import *
 
 
 class Experiment(object):
-    ctx = utils.try_gpu(0)
+    ctx = utils.try_gpu(1)
 
     INPUT_SAMPLE = nd.random.uniform(0, 255, (1, PHI_LENGTH * CHANNEL, HEIGHT, WIDTH), ctx=ctx) / 255.0
 
@@ -74,7 +74,7 @@ class Experiment(object):
         random_action = True
         episode_in_epoch = 0
         step_in_epoch = 0
-        reward_in_epoch = 0
+        reward_in_epoch = 0.0
         while steps_left > 0:
             if self.step_count > BEGIN_RANDOM_STEP:
                 random_action = False
@@ -94,14 +94,14 @@ class Experiment(object):
                 steps_left -= ep_steps
             t1 = time.time()
 
-            print('++++++ episode [%d] finish, episode step=%d, total_step=%d, time=%f s, ep_reward=%d, avg_loss=%f'
-                  % (self.episode_count, ep_steps, self.step_count, (t1 - t0), int(ep_reward), avg_loss))
+            print('++++++ episode finish [%d], episode step=%d, total_step=%d, time=%fs, ep_reward=%f, avg_loss=%f'
+                  % (self.episode_count, ep_steps, self.step_count, (t1 - t0), ep_reward, avg_loss))
             print('')
             self._update_target_net(random_action)
 
         self._save_net()
-        print('\n#########  epoch [%d] finish, episode=%d, step=%d, avg_step=%d, avg_reward=%f \n\n\n' %
-              (epoch, self.episode_count, self.step_count, step_in_epoch // episode_in_epoch,
+        print('\n###[%s]  EPOCH finish [%d] finish, episode=%d, step=%d, avg_step=%d, avg_reward=%f \n\n\n' %
+              (time.strftime("%Y-%m-%d %H:%M:%S"), epoch, self.episode_count, self.step_count, step_in_epoch // episode_in_epoch,
                reward_in_epoch / episode_in_epoch))
 
     def _update_target_net(self, random_action=False):
@@ -118,7 +118,7 @@ class Experiment(object):
 
     def _save_net(self):
         if not self.testing:
-            self.q_learning.save_params_to_file(MODEL_PATH, 'test1_' + BEGIN_TIME)
+            self.q_learning.save_params_to_file(MODEL_PATH, 'dqn_' + BEGIN_TIME)
 
 
 def train():

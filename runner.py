@@ -7,4 +7,5 @@
 import src.dqn.experiment as runner
 
 if __name__ == '__main__':
-    runner.train()
+    # runner.train()
+    runner.test()

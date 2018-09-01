@@ -7,12 +7,12 @@
 import time
 
 GAME_NAME = 'riverraid'
-PRE_TRAIN_MODEL_FILE = None
-# PRE_TRAIN_MODEL_FILE = '/home/zhangtao/model_file/hello_rl/net_params_test1_20180830_122510_20180830_131106.model'
-# PRE_TRAIN_MODEL_FILE = 'D:\data\\rl\\net_params_test1_175536_20180829_182429.model'
+#  PRE_TRAIN_MODEL_FILE = None
+# PRE_TRAIN_MODEL_FILE = '/home/zhangtao/model_file/hello_rl/net_params_test1_20180831_210601_20180901_213712.model'
+PRE_TRAIN_MODEL_FILE = 'D:\data\\rl\\model\\net_params_test1_20180831_210601_20180901_190927.model'
 OBSERVATION_TYPE = 'image'  # image or ram
 FRAME_SKIP = 4
-EPOCH_NUM = 120
+EPOCH_NUM = 360
 EPOCH_LENGTH = 30000
 
 PHI_LENGTH = 4
@@ -31,22 +31,22 @@ EPSILON_START = 1.0
 EPSILON_DECAY = 100000
 
 if PRE_TRAIN_MODEL_FILE is not None:
-    BEGIN_RANDOM_STEP = 200
-    EPSILON_MIN = 0.10
-    EPSILON_START = 0.4
+    BEGIN_RANDOM_STEP = 100
+    EPSILON_MIN = 0.15
+    EPSILON_START = 0.2
     EPSILON_DECAY = 20000
 
 TRAIN_PER_STEP = 4
 # UPDATE_TARGET_BY_STEP = 30000
 
 
-UPDATE_TARGET_BY_EPISODE_END = 50
-UPDATE_TARGET_BY_EPISODE_BEGIN = 5
-UPDATE_TARGET_DECAY = 300  # update UPDATE_TARGET_DECAY times to get to UPDATE_TARGET_BY_EPISODE_END
+UPDATE_TARGET_BY_EPISODE_END = 30
+UPDATE_TARGET_BY_EPISODE_BEGIN = 29
+UPDATE_TARGET_DECAY = 2  # update UPDATE_TARGET_DECAY times to get to UPDATE_TARGET_BY_EPISODE_END
 UPDATE_TARGET_RATE = (UPDATE_TARGET_BY_EPISODE_END - UPDATE_TARGET_BY_EPISODE_BEGIN) / UPDATE_TARGET_DECAY + 0.000001
 
 MODEL_PATH = '/home/zhangtao/model_file/hello_rl'
 
 BEGIN_TIME = time.strftime("%Y%m%d_%H%M%S")
 
-print('\n\n\n\n++++++++++++++++ edited time: 18:01 ++++++++++++++++++')
+print('\n\n\n\n++++++++++++++++ edited time: 21:45 ++++++++++++++++++')

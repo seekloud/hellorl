@@ -33,7 +33,7 @@ class Player(object):
             if not testing and random_action:
                 action = self.game.random_action()
             else:
-                action = self._choose_action(st, replay_buffer)
+                action = self._choose_action(st, replay_buffer, testing)
 
             next_st, reward, episode_done, lives = self.game.step(action)
             terminal = episode_done
@@ -54,9 +54,9 @@ class Player(object):
                 train_count += 1
         return episode_step, episode_reword, loss_sum / (train_count + 0.00001)
 
-    def _choose_action(self, img, replay_buffer):
+    def _choose_action(self, img, replay_buffer, testing):
         self.epsilon = max(self.epsilon_min, self.epsilon - self.epsilon_rate)
-        if self.rng.rand() < self.epsilon:
+        if not testing and self.rng.rand() < self.epsilon:
             action = self.rng.randint(0, self.action_num)
         else:
             phi = replay_buffer.phi(img)

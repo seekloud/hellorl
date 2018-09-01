@@ -27,7 +27,7 @@ class QLearning(object):
 
         self.update_target_net()
 
-        learning_rate = 0.002
+        learning_rate = 0.005
         weight_decay = 0.0
 
         #adagrad
@@ -97,10 +97,9 @@ class QLearning(object):
 
     def save_params_to_file(self, model_path, mark):
         time_mark = time.strftime("%Y%m%d_%H%M%S")
-        filename = model_path + '/net_params_' + str(mark) + '_' + time_mark + '.model'
-        print(time.strftime("%Y-%m-%d %H:%M:%S"), ': begin save model to ' + filename)
+        filename = model_path + '/net_' + str(mark) + '_' + time_mark + '.model'
         self.policy_net.save_params(filename)
-        print(time.strftime("%Y-%m-%d %H:%M:%S"), ', save model success:', filename)
+        print(time.strftime("%Y-%m-%d %H:%M:%S"), ' save model success:', filename)
 
     def get_net(self, action_num, input_sample):
         net = nn.Sequential()
