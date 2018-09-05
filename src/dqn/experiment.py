@@ -71,37 +71,45 @@ class Experiment(object):
 
     def _run_epoch(self, epoch, render=False):
         steps_left = EPOCH_LENGTH
-        random_action = True
+        random_episode = True
         episode_in_epoch = 0
         step_in_epoch = 0
         reward_in_epoch = 0.0
+        score_in_epoch = 0.0
         while steps_left > 0:
             if self.step_count > BEGIN_RANDOM_STEP:
-                random_action = False
+                random_episode = False
             t0 = time.time()
-            ep_steps, ep_reward, avg_loss = self.player.run_episode(epoch,
-                                                                    self.replay_buffer,
-                                                                    render=render,
-                                                                    random_action=random_action,
-                                                                    testing=self.testing)
+            ep_steps, ep_reward, ep_score, avg_loss, avg_max_q = self.player.run_episode(epoch,
+                                                                                         self.replay_buffer,
+                                                                                         render=render,
+                                                                                         random_action=random_episode,
+                                                                                         testing=self.testing)
 
             self.step_count += ep_steps
-            if not random_action:
+            if not random_episode:
                 self.episode_count += 1
                 episode_in_epoch += 1
+                score_in_epoch += ep_score
                 step_in_epoch += ep_steps
                 reward_in_epoch += ep_reward
                 steps_left -= ep_steps
             t1 = time.time()
 
-            print('++++++ episode finish [%d], episode step=%d, total_step=%d, time=%fs, ep_reward=%f, avg_loss=%f'
-                  % (self.episode_count, ep_steps, self.step_count, (t1 - t0), ep_reward, avg_loss))
+            print(
+                'episode [%d], episode step=%d, total_step=%d, time=%fs, score=%.2f, ep_reward=%.2f, avg_loss=%.4f, avg_q=%f'
+                % (self.episode_count, ep_steps, self.step_count, (t1 - t0), ep_score, ep_reward, avg_loss, avg_max_q))
             print('')
-            self._update_target_net(random_action)
+            self._update_target_net(random_episode)
 
         self._save_net()
-        print('\n###[%s]  EPOCH finish [%d] finish, episode=%d, step=%d, avg_step=%d, avg_reward=%f \n\n\n' %
-              (time.strftime("%Y-%m-%d %H:%M:%S"), epoch, self.episode_count, self.step_count, step_in_epoch // episode_in_epoch,
+        print('\n%s EPOCH finish [%d], episode=%d, step=%d, avg_step=%d, avg_score=%.2f avg_reward=%.2f \n\n\n' %
+              (time.strftime("%Y-%m-%d %H:%M:%S"),
+               epoch,
+               self.episode_count,
+               self.step_count,
+               step_in_epoch // episode_in_epoch,
+               score_in_epoch / episode_in_epoch,
                reward_in_epoch / episode_in_epoch))
 
     def _update_target_net(self, random_action=False):
@@ -118,7 +126,7 @@ class Experiment(object):
 
     def _save_net(self):
         if not self.testing:
-            self.q_learning.save_params_to_file(MODEL_PATH, 'dqn_' + BEGIN_TIME)
+            self.q_learning.save_params_to_file(MODEL_PATH, MODEL_FILE_MARK + BEGIN_TIME)
 
 
 def train():

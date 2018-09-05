@@ -5,6 +5,7 @@
 
 import gym
 from gym.envs.atari import AtariEnv
+from src.dqn.config import *
 
 
 class GameEnv(object):
@@ -18,16 +19,16 @@ class GameEnv(object):
         self.lives = self.gym_env.ale.lives()
 
     def step(self, action):
-        observation, reward, done, _ = self.gym_env.step(action)
-        new_lives = self.gym_env.ale.lives()
-
-        reward = min(1, max(-1, reward))
         self.step_count += 1
+        observation, reward, done, _ = self.gym_env.step(action)
+        score = reward
+        new_lives = self.gym_env.ale.lives()
+        reward = max(NEGATIVE_REWARD, min(POSITIVE_REWARD, reward))
+
         if self.lives > new_lives:
-            # damage = max(10000 - self.step_count * 0.5, 2000)
-            reward = -1
+            reward = NEGATIVE_REWARD
         self.lives = new_lives
-        return observation, reward, done, new_lives
+        return observation, reward, done, new_lives, score
 
     def render(self):
         return self.gym_env.render()

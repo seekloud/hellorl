@@ -6,47 +6,62 @@
 
 import time
 
-GAME_NAME = 'riverraid'
-#  PRE_TRAIN_MODEL_FILE = None
-# PRE_TRAIN_MODEL_FILE = '/home/zhangtao/model_file/hello_rl/net_params_test1_20180831_210601_20180901_213712.model'
-PRE_TRAIN_MODEL_FILE = 'D:\data\\rl\\model\\net_params_test1_20180831_210601_20180901_190927.model'
-OBSERVATION_TYPE = 'image'  # image or ram
-FRAME_SKIP = 4
+"""experiment"""
+PRE_TRAIN_MODEL_FILE = None
+# PRE_TRAIN_MODEL_FILE = '/home/zhangtao/model_file/hello_rl/net_dqn_20180904_162858_20180905_175454.model'
+# PRE_TRAIN_MODEL_FILE = 'D:\data\\rl\\model\\net_dqn_20180904_162858_20180905_172429.model'
 EPOCH_NUM = 360
 EPOCH_LENGTH = 30000
+RANDOM_SEED = int(time.time() * 1000) % 100000000
 
-PHI_LENGTH = 4
+"""game env"""
+# GAME_NAME = 'riverraid'
+GAME_NAME = 'breakout'
+ACTION_NUM = 4
+OBSERVATION_TYPE = 'image'  # image or ram
 CHANNEL = 3
 WIDTH = 160
 HEIGHT = 210
+FRAME_SKIP = 4
 
-BEGIN_RANDOM_STEP = 1000
+"""player"""
+TRAIN_PER_STEP = 4
 
-BUFFER_MAX = 50000
+"""replay buffer"""
+PHI_LENGTH = 4
+BUFFER_MAX = 100000
 # BUFFER_MAX = 200000
+BEGIN_RANDOM_STEP = 1000
+if PRE_TRAIN_MODEL_FILE is not None:
+    BEGIN_RANDOM_STEP = 100
+
+"""q-learning"""
 DISCOUNT = 0.90
-RANDOM_SEED = int(time.time() * 1000) % 100000000
 EPSILON_MIN = 0.15
 EPSILON_START = 1.0
 EPSILON_DECAY = 100000
-
 if PRE_TRAIN_MODEL_FILE is not None:
-    BEGIN_RANDOM_STEP = 100
     EPSILON_MIN = 0.15
     EPSILON_START = 0.2
-    EPSILON_DECAY = 20000
+    EPSILON_DECAY = 200
 
-TRAIN_PER_STEP = 4
-# UPDATE_TARGET_BY_STEP = 30000
-
-
-UPDATE_TARGET_BY_EPISODE_END = 30
-UPDATE_TARGET_BY_EPISODE_BEGIN = 29
-UPDATE_TARGET_DECAY = 2  # update UPDATE_TARGET_DECAY times to get to UPDATE_TARGET_BY_EPISODE_END
+UPDATE_TARGET_BY_EPISODE_END = 50
+UPDATE_TARGET_BY_EPISODE_BEGIN = 5
+UPDATE_TARGET_DECAY = 100  # update UPDATE_TARGET_DECAY times to get to UPDATE_TARGET_BY_EPISODE_END
 UPDATE_TARGET_RATE = (UPDATE_TARGET_BY_EPISODE_END - UPDATE_TARGET_BY_EPISODE_BEGIN) / UPDATE_TARGET_DECAY + 0.000001
 
-MODEL_PATH = '/home/zhangtao/model_file/hello_rl'
+LEARNING_RATE = 0.005
+WEIGHT_DECAY = 0.0
+# GRAD_CLIPPING_THETA = 0.01
+GRAD_CLIPPING_THETA = 0.01
 
+POSITIVE_REWARD = 1
+NEGATIVE_REWARD = -1
+
+"""OTHER"""
+MODEL_PATH = '/home/zhangtao/model_file/hello_rl'
+MODEL_FILE_MARK = 'bko_dqn_'
 BEGIN_TIME = time.strftime("%Y%m%d_%H%M%S")
 
-print('\n\n\n\n++++++++++++++++ edited time: 21:45 ++++++++++++++++++')
+print('\n\n\n\n++++++++++++++++ edited time: 2018-09-05 18:17 ++++++++++++++++++')
+print('GAME_NAME:', GAME_NAME)

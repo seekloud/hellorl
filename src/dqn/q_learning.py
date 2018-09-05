@@ -9,17 +9,14 @@ from mxnet import init, nd, autograd, gluon
 from mxnet.gluon import data as gdata, nn, loss as gloss
 import time
 import src.utils as g_utils
-
-clipping_theta = 0.01
-
-from src.dqn.config import DISCOUNT
+from src.dqn.config import *
 
 
 class QLearning(object):
     def __init__(self, ctx, input_sample, model_file=None):
         self.ctx = ctx
-        self.policy_net = self.get_net(18, input_sample)
-        self.target_net = self.get_net(18, input_sample)
+        self.policy_net = self.get_net(ACTION_NUM, input_sample)
+        self.target_net = self.get_net(ACTION_NUM, input_sample)
 
         if model_file is not None:
             print('%s: read trained model from [%s]' % (time.strftime("%Y-%m-%d %H:%M:%S"), model_file))
@@ -27,13 +24,10 @@ class QLearning(object):
 
         self.update_target_net()
 
-        learning_rate = 0.005
-        weight_decay = 0.0
-
-        #adagrad
+        # adagrad
         self.trainer = gluon.Trainer(self.policy_net.collect_params(), 'adagrad',
-                                     {'learning_rate': learning_rate,
-                                      'wd': weight_decay})
+                                     {'learning_rate': LEARNING_RATE,
+                                      'wd': WEIGHT_DECAY})
         self.loss_func = gluon.loss.L2Loss()
 
     def update_target_net(self):
@@ -44,8 +38,18 @@ class QLearning(object):
         state = nd.array(state, ctx=self.ctx).reshape((1, -1, shape0[-2], shape0[-1]))
         out = self.policy_net(state)
         max_index = nd.argmax(out, axis=1)
-        action = max_index.astype(np.uint8).asscalar()
-        return action
+        action = max_index.astype(np.int).asscalar()
+        # print('state:', state)
+        # print('state s:', state.shape)
+        # print('out:', out)
+        # print('out s:', out.shape)
+        # print('max_index:', max_index)
+        # print('max_index s:', max_index.shape)
+        # print('action:', action)
+        # print('action type:', type(action))
+
+        max_q = out[0, action].asscalar()
+        return action, max_q
 
     def train_policy_net(self, imgs, actions, rs, terminals):
         """
@@ -83,10 +87,22 @@ class QLearning(object):
             current_qs = self.policy_net(st)
             current_q = nd.pick(current_qs, at, 1)
             loss = self.loss_func(target, current_q)
+            # diff = nd.abs(current_q - target)
+            # quadratic_part = nd.clip(diff, -1, 1)
+            # loss = 0.5 * nd.sum(nd.square(quadratic_part)) + nd.sum(diff - quadratic_part)
+
+            # print('current_qs', current_qs)
+            # print('current_q', current_q)
+            # print('diff', diff)
+            # print('quadratic_part', quadratic_part)
+            # print('loss', loss)
+
         loss.backward()
+
         # 梯度裁剪
-        params = [p.data() for p in self.policy_net.collect_params().values()]
-        g_utils.grad_clipping(params, clipping_theta, self.ctx)
+        if GRAD_CLIPPING_THETA is not None:
+            params = [p.data() for p in self.policy_net.collect_params().values()]
+            g_utils.grad_clipping(params, GRAD_CLIPPING_THETA, self.ctx)
 
         self.trainer.step(batch_size)
         total_loss = loss.mean().asscalar()
