@@ -7,9 +7,9 @@
 import time
 
 """experiment"""
-PRE_TRAIN_MODEL_FILE = None
+# PRE_TRAIN_MODEL_FILE = None
 # PRE_TRAIN_MODEL_FILE = '/home/zhangtao/model_file/hello_rl/net_dqn_20180904_162858_20180905_175454.model'
-# PRE_TRAIN_MODEL_FILE = 'D:\data\\rl\\model\\net_dqn_20180904_162858_20180905_172429.model'
+PRE_TRAIN_MODEL_FILE = 'D:\data\\rl\\model\\net_bko_dqn_20180905_232642_20180907_063819.model'
 EPOCH_NUM = 360
 EPOCH_LENGTH = 30000
 RANDOM_SEED = int(time.time() * 1000) % 100000000
@@ -28,7 +28,7 @@ FRAME_SKIP = 4
 TRAIN_PER_STEP = 4
 
 """replay buffer"""
-PHI_LENGTH = 4
+PHI_LENGTH = 12
 BUFFER_MAX = 100000
 # BUFFER_MAX = 200000
 BEGIN_RANDOM_STEP = 1000
@@ -50,12 +50,12 @@ UPDATE_TARGET_BY_EPISODE_BEGIN = 5
 UPDATE_TARGET_DECAY = 100  # update UPDATE_TARGET_DECAY times to get to UPDATE_TARGET_BY_EPISODE_END
 UPDATE_TARGET_RATE = (UPDATE_TARGET_BY_EPISODE_END - UPDATE_TARGET_BY_EPISODE_BEGIN) / UPDATE_TARGET_DECAY + 0.000001
 
-LEARNING_RATE = 0.005
+LEARNING_RATE = 0.01
 WEIGHT_DECAY = 0.0
 # GRAD_CLIPPING_THETA = 0.01
 GRAD_CLIPPING_THETA = 0.01
 
-POSITIVE_REWARD = 1
+POSITIVE_REWARD = 0.1
 NEGATIVE_REWARD = -1
 
 """OTHER"""
@@ -63,5 +63,5 @@ MODEL_PATH = '/home/zhangtao/model_file/hello_rl'
 MODEL_FILE_MARK = 'bko_dqn_'
 BEGIN_TIME = time.strftime("%Y%m%d_%H%M%S")
 
-print('\n\n\n\n++++++++++++++++ edited time: 2018-09-05 18:17 ++++++++++++++++++')
+print('\n\n\n\n++++++++++++++++ edited time: 2018-09-05 23:22 ++++++++++++++++++')
 print('GAME_NAME:', GAME_NAME)

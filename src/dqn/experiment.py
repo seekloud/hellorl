@@ -115,7 +115,7 @@ class Experiment(object):
     def _update_target_net(self, random_action=False):
         if not self.testing and self.episode_count == self.update_target_episode and not random_action:
             self.target_net_update_count += 1
-            print('%s UPDATE TARGET NET, interval[%d], update count[%d]\n' % (
+            print('%s UPDATE TARGET NET, interval[%.3f], update count[%d]\n' % (
                 time.strftime("%Y-%m-%d %H:%M:%S"), self.update_target_interval, self.target_net_update_count))
 
             self.update_target_episode = int(self.update_target_episode + self.update_target_interval)

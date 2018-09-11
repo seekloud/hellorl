@@ -15,7 +15,7 @@ import time
 
 floatX = 'float32'
 
-from src.dqn.config import DISCOUNT
+from src.dqn.config import DISCOUNT, PHI_LENGTH
 
 
 class ReplayBuffer(object):
@@ -24,7 +24,7 @@ actions, and rewards.
 
     """
 
-    def __init__(self, height, width, channel, rng, max_steps=10000, phi_length=4):
+    def __init__(self, height, width, channel, rng, max_steps=10000):
         """Construct a DataSet.
 
         Arguments:
@@ -43,7 +43,7 @@ actions, and rewards.
         self.height = height
         self.channel = channel
         self.max_steps = max_steps
-        self.phi_length = phi_length
+        self.phi_length = PHI_LENGTH
         self.rng = rng
 
         # Allocate the circular buffers and indices.
