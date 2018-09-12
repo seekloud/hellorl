@@ -14,7 +14,6 @@ from gym import wrappers
 # env = gym.make('Breakout-ram-v0')
 # env = gym.make('Alien-ram-v0')
 
-env_name = 'MsPacman-ram-v0'
 env_name = 'Centipede-ram-v0'
 env_name = 'Assault-ram-v0'
 env_name = 'Atlantis-v0'
@@ -24,6 +23,7 @@ env_name = 'Seaquest-v0'
 env_name = 'BeamRider-v0'
 env_name = 'Pong-v0'
 env_name = 'Breakout-v0'
+env_name = 'MsPacman-v0'
 env = gym.make(env_name)
 
 e = env.env.reset()
@@ -31,9 +31,9 @@ outdir = '/tmp/random-agent-results'
 # env = wrappers.Monitor(env, directory=outdir, force=True)
 
 print('action space:', env.action_space)
-for i_episode in range(30):
+for i_episode in range(3):
     observation = env.reset()
-    for t in range(5000):
+    for t in range(500):
         env.render()
         action = env.action_space.sample()
 
@@ -49,7 +49,7 @@ for i_episode in range(30):
 
 print('DONE.')
 print('observation:', str(env.observation_space))
-print('action:', str(env.action_space))
+print('action_space:', str(env.action_space))
 print('action:', str(env.action_space.contains(17)))
 print('action:', str(env.action_space.contains(18)))
 
