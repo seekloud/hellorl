@@ -97,7 +97,7 @@ class Experiment(object):
             t1 = time.time()
 
             print(
-                'episode [%d], episode step=%d, total_step=%d, time=%fs, score=%.2f, ep_reward=%.2f, avg_loss=%.4f, avg_q=%f'
+                'episode [%d], episode step=%d, total_step=%d, time=%.2fs, score=%.2f, ep_reward=%.2f, avg_loss=%.4f, avg_q=%f'
                 % (self.episode_count, ep_steps, self.step_count, (t1 - t0), ep_score, ep_reward, avg_loss, avg_max_q))
             print('')
             self._update_target_net(random_episode)
