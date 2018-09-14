@@ -43,6 +43,7 @@ customer_conf_file = sys.argv[1]
 dqn_conf = load_conf(customer_conf_file)
 
 """experiment"""
+GPU_INDEX = dqn_conf.getint('GPU_INDEX')
 PRE_TRAIN_MODEL_FILE = dqn_conf.get('PRE_TRAIN_MODEL_FILE')
 EPOCH_NUM = dqn_conf.getint('EPOCH_NUM')
 EPOCH_LENGTH = dqn_conf.getint('EPOCH_LENGTH')
