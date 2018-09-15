@@ -16,6 +16,12 @@ sections = config.sections()
 print(sections)
 
 d1 = config['D1']
+d2 = config['D2']
+
+if config.has_section('D2'):
+    for k, v in config['D2'].items():
+        print('set %s to %s' % (k, v))
+        config.set('D1', k, v)
 
 print(d1.get('lra'))
 print(d1.get('wda'))
@@ -39,15 +45,15 @@ print('items:')
 for k, v in q.items():
     print('%s = %s' % (k, v))
 
-dqn_configuration = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
-dqn_configuration.sections()
-dqn_configuration.read('../../configurations/dqn_default_conf.ini')
-dqn_configuration.read('../../configurations/dqn_conf_1001.ini')
-
-dqn_conf = dqn_configuration['DQN']
-
-print('-----------------------------------------------------')
-print(dqn_conf.get('a'))
-print(dqn_conf.get('b'))
-print(dqn_conf.get('c'))
-print(dqn_conf.get('d'))
+# dqn_configuration = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
+# dqn_configuration.sections()
+# dqn_configuration.read('../../configurations/dqn_default_conf.ini')
+# dqn_configuration.read('../../configurations/dqn_conf_1001.ini')
+#
+# dqn_conf = dqn_configuration['DQN']
+#
+# print('-----------------------------------------------------')
+# print(dqn_conf.get('a'))
+# print(dqn_conf.get('b'))
+# print(dqn_conf.get('c'))
+# print(dqn_conf.get('d'))

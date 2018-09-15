@@ -16,25 +16,17 @@ def load_conf(conf_file):
     # config.ini文件路径,获取当前目录的父目录的父目录与congig.ini拼接
     default_conf_file = os.path.join(os.path.abspath(os.path.dirname(current_path)),
                                      'dqn_default_conf.ini')
-    print('default conf file:', default_conf_file)
+    # print('default conf file:', default_conf_file)
+    #
+    # print('customer_conf_file:', conf_file)
 
-    print('customer_conf_file:', conf_file)
-
-    print(os.path.exists(default_conf_file))
-    print(os.path.exists(conf_file))
+    # print(os.path.exists(default_conf_file))
+    # print(os.path.exists(conf_file))
 
     config = configparser.ConfigParser(allow_no_value=True, interpolation=configparser.ExtendedInterpolation())
 
-    print(type(default_conf_file))
-    print(type(conf_file))
-
-    print(default_conf_file == 'D:\workstation\python\hellorl\src\dqn\dqn_default_conf.ini')
-    print(conf_file == 'D:\workstation\python\hellorl\configurations\dqn_conf_1001.ini')
     config.read(default_conf_file)
-    # config.read('D:\workstation\python\hellorl\src\dqn\dqn_default_conf.ini')
     config.read(conf_file)
-    # config.read('D:\workstation\python\hellorl\configurations\dqn_conf_1001.ini')
-    print(config.sections())
     return config['DQN']
 
 

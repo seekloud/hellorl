@@ -71,6 +71,7 @@ def load_data_fashion_mnist(batch_size, resize=None, root="~/.mxnet/datasets/fas
 def try_gpu(idx=0):
     """If GPU is available, return mx.gpu(0); else return mx.cpu()"""
     if idx < 0:
+        print('use CPU.')
         ctx = mx.cpu()
     else:
         try:

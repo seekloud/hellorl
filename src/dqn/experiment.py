@@ -62,10 +62,10 @@ class Experiment(object):
         print('train done.')
         self.game.close()
 
-    def start_test(self):
+    def start_test(self, render):
         assert PRE_TRAIN_MODEL_FILE is not None
         for i in range(1, EPOCH_NUM + 1):
-            self._run_epoch(i, render=True)
+            self._run_epoch(i, render=render)
         print('test done.')
         self.game.close()
 
@@ -135,10 +135,14 @@ def train():
     exper.start_train()
 
 
-def test():
+def test(render):
     print(' ====================== START test ========================')
     exper = Experiment(testing=True)
-    exper.start_test()
+    exper.start_test(render=render)
+
+
+def test_speed():
+    pass
 
 
 if __name__ == '__main__':
