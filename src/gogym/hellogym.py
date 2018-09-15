@@ -31,15 +31,18 @@ outdir = '/tmp/random-agent-results'
 # env = wrappers.Monitor(env, directory=outdir, force=True)
 
 print('action space:', env.action_space)
-for i_episode in range(3):
+for i_episode in range(1):
     observation = env.reset()
-    for t in range(500):
+    for t in range(50):
         env.render()
         action = env.action_space.sample()
 
         # print('action:', action)
 
         time.sleep(0.04)
+        print('-- ' * 10)
+        print('observation type:', type(observation))
+        print('observation:', observation)
 
         observation, reward, done, info = env.step(action)
         # print("------", action, observation, reward, done)

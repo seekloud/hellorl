@@ -20,7 +20,7 @@ class QLearning(object):
 
         if model_file is not None:
             print('%s: read trained model from [%s]' % (time.strftime("%Y-%m-%d %H:%M:%S"), model_file))
-            self.policy_net.load_params(model_file, ctx=self.ctx)
+            self.policy_net.load_parameters(model_file, ctx=self.ctx)
 
         self.update_target_net()
 
@@ -114,7 +114,7 @@ class QLearning(object):
     def save_params_to_file(self, model_path, mark):
         time_mark = time.strftime("%Y%m%d_%H%M%S")
         filename = model_path + '/net_' + str(mark) + '_' + time_mark + '.model'
-        self.policy_net.save_params(filename)
+        self.policy_net.save_parameters(filename)
         print(time.strftime("%Y-%m-%d %H:%M:%S"), ' save model success:', filename)
 
     def get_net(self, action_num, input_sample):
@@ -132,13 +132,13 @@ class QLearning(object):
         net(input_sample)
         return net
 
-
-transform_test = gdata.vision.transforms.Compose([
-    gdata.vision.transforms.ToTensor(),
-    gdata.vision.transforms.Normalize([0.4914, 0.4822, 0.4465],
-                                      [0.2023, 0.1994, 0.2010])
-])
-
+#
+# transform_test = gdata.vision.transforms.Compose([
+#     gdata.vision.transforms.ToTensor(),
+#     gdata.vision.transforms.Normalize([0.4914, 0.4822, 0.4465],
+#                                       [0.2023, 0.1994, 0.2010])
+# ])
+#
 
 def copy_params(src_net, dst_net):
     ps_src = src_net.collect_params()
