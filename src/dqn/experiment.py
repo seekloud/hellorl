@@ -16,7 +16,7 @@ from src.dqn.replay_buffer import ReplayBuffer
 from src.dqn.q_learning import QLearning
 from src import utils
 import mxnet as mx
-import mxnet as nd
+from mxnet import nd
 import src.ztutils as ztutils
 
 from src.dqn.config import *
@@ -24,11 +24,11 @@ from src.dqn.config import *
 
 class Experiment(object):
     ctx = utils.try_gpu(GPU_INDEX)
+    mx.random.seed(RANDOM_SEED)
+    rng = np.random.RandomState(RANDOM_SEED)
 
     INPUT_SAMPLE = nd.random.uniform(0, 255, (1, PHI_LENGTH * CHANNEL, HEIGHT, WIDTH), ctx=ctx) / 255.0
 
-    mx.random.seed(RANDOM_SEED)
-    rng = np.random.RandomState(RANDOM_SEED)
 
     def __init__(self, testing=False):
         ztutils.mkdir_if_not_exist(MODEL_PATH)
