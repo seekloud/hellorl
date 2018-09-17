@@ -5,7 +5,15 @@
 
 import queue
 import multiprocessing as mp
-import multiprocessing.managers.Queue as q
+
+
+class Coach(object):
+
+    def __init__(self, experience_queue: queue.Queue):
+        pass
+
+    def train(self):
+        pass
 
 
 def foo(a: int, qu: queue.Queue):
@@ -13,7 +21,6 @@ def foo(a: int, qu: queue.Queue):
     print(qu)
     b: int = 5
     print(b)
-
     pass
 
 
