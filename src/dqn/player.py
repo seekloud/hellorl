@@ -25,12 +25,12 @@ class Player(object):
         episode_score = 0.0
         q_sum = 0.0
         q_count = 0
-        st = self.game.reset()
+        st, reward, episode_done, lives, score = self.game.reset()
 
         # do no operation steps.
         max_no_op_steps = 20
         for _ in range(self.rng.randint(10, max_no_op_steps)):
-            self.game.step(0)
+            st = self.game.step(0)
 
         while True:
             if not testing and random_action:
@@ -58,7 +58,8 @@ class Player(object):
                 loss = self.q_learning.train_policy_net(imgs, actions, rs, terminal)
                 loss_sum += loss
                 train_count += 1
-        return episode_step, episode_reword, episode_score, loss_sum / (train_count + 0.0000001), q_sum / (q_count + 0.0000001)
+        return episode_step, episode_reword, episode_score, loss_sum / (train_count + 0.0000001), q_sum / (
+                    q_count + 0.0000001)
 
     def _choose_action(self, img, replay_buffer, testing):
         self.epsilon = max(self.epsilon_min, self.epsilon - self.epsilon_rate)

@@ -54,7 +54,7 @@ class Experiment(object):
             player_action_outs[player_id] = action_out
 
         # start coach
-        pool.apply_async(start_coach, (shared_inform_map, experience_queue, self.play_net_file))
+        pool.apply_async(start_coach, (experience_queue, self.play_net_file, shared_inform_map))
 
         # process player observations
         while True:
@@ -70,8 +70,8 @@ class Experiment(object):
                     player_list.append(player_id)
 
             action_list, max_q_list = self.choose_batch_action(observation_list)
-            for p, a in zip(player_list, action_list):
-                player_action_outs[p].send(a)
+            for p, action, q_value in zip(player_list, action_list, max_q_list):
+                player_action_outs[p].send((action, q_value))
 
             self.step_count += len(player_list)
 

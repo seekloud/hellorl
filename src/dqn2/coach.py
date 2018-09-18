@@ -7,9 +7,9 @@ import queue
 import multiprocessing as mp
 
 
-def start_coach(shared_map,
-                experience_queue: queue.Queue,
-                pre_trained_model_file: str
+def start_coach(experience_queue: queue.Queue,
+                pre_trained_model_file: str,
+                shared_inform
                 ):
     # create coach, and start it.
     pass
