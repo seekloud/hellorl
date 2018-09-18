@@ -7,6 +7,14 @@ import queue
 import multiprocessing as mp
 
 
+def start_coach(shared_map,
+                experience_queue: queue.Queue,
+                pre_trained_model_file: str
+                ):
+    # create coach, and start it.
+    pass
+
+
 class Coach(object):
 
     def __init__(self, experience_queue: queue.Queue):

@@ -4,4 +4,18 @@
 # FileName: constants.py
 
 
-latest_model_file_key = 'latest_model_file_key'
+c_latest_model_file_key = 'latest_model_file_key'
+c_avg_score_key = 'latest_model_file_key'
+
+
+
+
+
+
+
+
+
+
+
+
+

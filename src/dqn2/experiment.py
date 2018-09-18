@@ -5,93 +5,131 @@
 
 
 import multiprocessing as mp
-import time
-import sys
-import random
+
+import numpy as np
 import mxnet as mx
 from mxnet import nd
-import queue
-import numpy as np
-from src.dqn2.coach import Coach
-from src.dqn2.player import Player
 
+from src.dqn2.coach import start_coach
+from src.dqn2.config import *
+from src.dqn2.network import get_net
+from src.dqn2.player import start_player
 from src.dqn2.constants import *
 
 
 class Experiment(object):
 
-    def __init__(self):
-        pass
+    def __init__(self, model_file):
+        self.ctx = mx.gpu(GPU_INDEX)
+        self.play_net_file = model_file
+        self.play_net = get_net(ACTION_NUM, self.ctx)
+
+        if self.play_net_file is not None:
+            print('%s: Experiment read trained model from [%s]' % (time.strftime("%Y-%m-%d %H:%M:%S"), model_file))
+            self.play_net.load_parameters(model_file, ctx=self.ctx)
+
+        self.step_count = 0
+        return
 
     def start_train(self):
         worker_num = 5
 
-        current_play_net_file = None
-
         pool = mp.Pool(worker_num + 1)
         manager = mp.Manager()
+
         shared_inform_map = manager.dict()
+        shared_inform_map[c_latest_model_file_key] = self.play_net_file
+
         player_observation_queue = manager.Queue()
+
         experience_queue = manager.Queue()
 
-        players = ['player_' + str(i) for i in range(1, worker_num + 1)]
-        player_pips = dict()
+        player_action_outs = dict()
+        players = range(1, worker_num + 1)
 
-        # create players
-        for player_name in players:
+        # start players
+        for player_id in players:
             action_in, action_out = mp.Pipe()
-            pool.apply_async(self._start_player, (player_name, player_observation_queue, action_in))
+            pool.apply_async(start_player, (player_id, player_observation_queue, action_in))
+            player_action_outs[player_id] = action_out
 
-        pool.apply_async(self._start_coach, (shared_inform_map, player_observation_queue))
-        pass
+        # start coach
+        pool.apply_async(start_coach, (shared_inform_map, experience_queue, self.play_net_file))
 
-    def _start_player(self, play_name, observation_queue: queue.Queue, action_in: mp.Connection):
-        # create player and start it.
-        print('in _start_player', play_name, observation_queue, action_in)
-        for i in range(10):
-            print('%s %d' % (play_name, i))
-            t = random.randint(10, 100) / 1000.1
-            time.sleep(t)
-        pass
+        # process player observations
+        while True:
+            player_list = []
+            observation_list = []
+            player_observation_queue.put((-1, 0))
+            while True:
+                player_id, observation = player_observation_queue.get()
+                if player_id == -1:
+                    break
+                else:
+                    observation_list.append(observation)
+                    player_list.append(player_id)
 
-    def _start_coach(self, shared_map, observation_queue: queue.Queue):
-        # create coach, and start it.
-        pass
+            action_list, max_q_list = self.choose_batch_action(observation_list)
+            for p, a in zip(player_list, action_list):
+                player_action_outs[p].send(a)
+
+            self.step_count += len(player_list)
+
+            self.update_play_net(shared_inform_map)
+
+    def update_play_net(self, inform_map):
+        latest_model_file = inform_map[c_latest_model_file_key]
+        if latest_model_file != self.play_net_file:
+            print('%s: Experiment updated play net from [%s]' % (time.strftime("%Y-%m-%d %H:%M:%S"), latest_model_file))
+            self.play_net.load_parameters(latest_model_file, ctx=self.ctx)
+            self.play_net_file = latest_model_file
+        return
+
+    def choose_action(self, phi):
+        shape0 = phi.shape
+        state = nd.array(phi, ctx=self.ctx).reshape((1, -1, shape0[-2], shape0[-1]))
+        out = self.play_net(state)
+        max_index = nd.argmax(out, axis=1)
+        action = max_index.astype(np.int).asscalar()
+        # print('state:', state)
+        # print('state s:', state.shape)
+        # print('out:', out)
+        # print('out s:', out.shape)
+        # print('max_index:', max_index)
+        # print('max_index s:', max_index.shape)
+        # print('action:', action)
+        # print('action type:', type(action))
+
+        max_q = out[0, action].asscalar()
+        return action
+
+    def choose_batch_action(self, phi_list):
+        batch_input = nd.array(phi_list, ctx=self.ctx)
+        shape0 = batch_input.shape
+        state = nd.array(batch_input, ctx=self.ctx).reshape((1, -1, shape0[-2], shape0[-1]))
+        out = self.play_net(state)
+        max_index = nd.argmax(out, axis=1)
+        actions = max_index.astype(np.int)
+        # print('state:', state)
+        # print('state s:', state.shape)
+        # print('out:', out)
+        # print('out s:', out.shape)
+        # print('max_index:', max_index)
+        # print('max_index s:', max_index.shape)
+        # print('action:', action)
+        # print('action type:', type(action))
+
+        max_q_list = nd.pick(out, actions, 1).asnumpy().tolist()
+        return actions.asnumpy().tolist(), max_q_list
 
     def start_test(self):
         pass
 
-
-def change_value(d):
-    print('in change_value, value =', d['informs'])
-    d['informs'] = 'ok.'
 
 
 if __name__ == '__main__':
     exp = Experiment()
     exp.start_train()
 
-    # informs = mp.Value('str', 'hello, world.')
-    # mm = mp.Manager()
-    # pool = mp.Pool(1)
-    # d = mm.dict()
-    # d['informs'] = 'hello, world.'
-    #
-    # print('go')
-    # pool.apply_async(change_value, (d,))
-    #
-    # pool.close()
-    # pool.join()
-    # print('main value = ', d['informs'])
-    # print('main value1 = ', d.get('aaa', None))
-
-    # t0 = time.time()
-    # for i in range(1000):
-    #     if d['informs'] == 'hahah':
-    #         print('error.')
-    # t1 = time.time()
-    #
-    #
-    # print('DONE. t=', (t1 - t0))
 
     pass
