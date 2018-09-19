@@ -93,11 +93,13 @@ print('GAME_NAME:', GAME_NAME)
 print('--------------------------')
 
 print('configuration:')
-for k, v in dqn_conf.items():
-    print('[%s = %s]' % (k, v))
+for conf_k, conf_v in dqn_conf.items():
+    print('[%s = %s]' % (conf_k, conf_v))
 
 print('--------------------------')
 
+
+FILE_PREFIX = dqn_conf.get('FILE_PREFIX')
 
 
 

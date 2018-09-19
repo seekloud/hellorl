@@ -25,12 +25,12 @@ class Player(object):
         episode_score = 0.0
         q_sum = 0.0
         q_count = 0
-        st, reward, episode_done, lives, score = self.game.reset()
+        st = self.game.reset()
 
         # do no operation steps.
-        max_no_op_steps = 20
-        for _ in range(self.rng.randint(10, max_no_op_steps)):
-            st = self.game.step(0)
+        max_no_op_steps = 10
+        for _ in range(self.rng.randint(5, max_no_op_steps)):
+            st, _, _, _, _ = self.game.step(0)
 
         while True:
             if not testing and random_action:
@@ -40,6 +40,8 @@ class Player(object):
                 if max_q is not None:
                     q_count += 1
                     q_sum += max_q
+                if GAME_NAME == 'breakout' and episode_step % 20 == 0:
+                    action = 1
             next_st, reward, episode_done, lives, score = self.game.step(action)
             terminal = episode_done
             replay_buffer.add_sample(st, action, reward, terminal)

@@ -22,8 +22,8 @@ env_name = 'SpaceInvaders-v0'
 env_name = 'Seaquest-v0'
 env_name = 'BeamRider-v0'
 env_name = 'Pong-v0'
-env_name = 'Breakout-v0'
 env_name = 'MsPacman-v0'
+env_name = 'Breakout-v0'
 env = gym.make(env_name)
 
 e = env.env.reset()
@@ -33,9 +33,10 @@ outdir = '/tmp/random-agent-results'
 print('action space:', env.action_space)
 for i_episode in range(1):
     observation = env.reset()
-    for t in range(50):
+    for t in range(100):
         env.render()
-        action = env.action_space.sample()
+        # action = env.action_space.sample()
+        action = 1
 
         # print('action:', action)
 

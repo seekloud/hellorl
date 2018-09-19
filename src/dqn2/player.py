@@ -25,7 +25,6 @@ def start_player(play_id: int,
         player.run_episode()
 
 
-
 class Player(object):
     def __init__(self,
                  play_id,
@@ -123,9 +122,6 @@ class CirceBuffer(object):
         self._list = []
 
 
-
-
-
 def test_circe_buffer():
     buffer = CirceBuffer(5)
     buffer.add(1)
@@ -154,7 +150,6 @@ def test_circe_buffer():
     print(buffer.avg())
     pass
 
+
 if __name__ == '__main__':
-
-
     pass

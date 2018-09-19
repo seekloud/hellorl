@@ -15,12 +15,13 @@ from src.dqn2.config import *
 from src.dqn2.network import get_net
 from src.dqn2.player import start_player
 from src.dqn2.constants import *
+import src.utils as utils
 
 
 class Experiment(object):
 
     def __init__(self, model_file):
-        self.ctx = mx.gpu(GPU_INDEX)
+        self.ctx = utils.try_gpu(GPU_INDEX)
         self.play_net_file = model_file
         self.play_net = get_net(ACTION_NUM, self.ctx)
 
@@ -54,7 +55,7 @@ class Experiment(object):
             player_action_outs[player_id] = action_out
 
         # start coach
-        pool.apply_async(start_coach, (experience_queue, self.play_net_file, shared_inform_map))
+        pool.apply_async(start_coach, (self.play_net_file, experience_queue,  shared_inform_map))
 
         # process player observations
         while True:

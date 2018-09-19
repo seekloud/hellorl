@@ -13,7 +13,6 @@ from src.dqn2.config import *
 def get_net(
         action_num: int,
         ctx: mx.Context):
-
     net = nn.Sequential()
     with net.name_scope():
         net.add(
@@ -30,11 +29,18 @@ def get_net(
     return net
 
 
+def save_params_to_file(net, name, postfix='model', prefix=FILE_PREFIX):
+    time_mark = time.strftime("%Y%m%d_%H%M%S")
+    filename = MODEL_PATH + '/' + prefix + '_' + name + '_' + time_mark + '.' + postfix
+    net.save_parameters(filename)
+    print(time.strftime("%Y-%m-%d %H:%M:%S"), ' save model success:', filename)
 
 
-
-
-
-
-
-
+def copy_parameters(src_net, dst_net):
+    ps_src = src_net.collect_params()
+    ps_dst = dst_net.collect_params()
+    prefix_length = len(src_net.prefix)
+    for k, v in ps_src.items():
+        k = k[prefix_length:]
+        v_dst = ps_dst.get(k)
+        v_dst.set_data(v.data())
