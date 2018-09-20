@@ -7,27 +7,32 @@
 import multiprocessing as mp
 
 import numpy as np
-import mxnet as mx
 from mxnet import nd
 
+import src.utils as utils
 from src.dqn2.coach import start_coach
 from src.dqn2.config import *
+from src.dqn2.constants import *
 from src.dqn2.network import get_net
 from src.dqn2.player import start_player
-from src.dqn2.constants import *
-import src.utils as utils
 
 
 class Experiment(object):
 
-    def __init__(self, model_file):
+    def __init__(self):
+
+        self.model_file = PRE_TRAIN_MODEL_FILE
         self.ctx = utils.try_gpu(GPU_INDEX)
-        self.play_net_file = model_file
+
+        self.play_net_version = -1
         self.play_net = get_net(ACTION_NUM, self.ctx)
 
-        if self.play_net_file is not None:
+        self.coach_play_net_version = mp.Value('i', -1)
+        self.coach_play_net_file = PLAY_NET_MODEL_FILE
+
+        if self.model_file is not None:
             print('%s: Experiment read trained model from [%s]' % (time.strftime("%Y-%m-%d %H:%M:%S"), model_file))
-            self.play_net.load_parameters(model_file, ctx=self.ctx)
+            self.play_net.load_parameters(self.model_file, ctx=self.ctx)
 
         self.step_count = 0
         return
@@ -37,9 +42,6 @@ class Experiment(object):
 
         pool = mp.Pool(worker_num + 1)
         manager = mp.Manager()
-
-        shared_inform_map = manager.dict()
-        shared_inform_map[c_latest_model_file_key] = self.play_net_file
 
         player_observation_queue = manager.Queue()
 
@@ -55,7 +57,7 @@ class Experiment(object):
             player_action_outs[player_id] = action_out
 
         # start coach
-        pool.apply_async(start_coach, (self.play_net_file, experience_queue,  shared_inform_map))
+        pool.apply_async(start_coach, (self.model_file, experience_queue, self.coach_play_net_version))
 
         # process player observations
         while True:
@@ -76,14 +78,15 @@ class Experiment(object):
 
             self.step_count += len(player_list)
 
-            self.update_play_net(shared_inform_map)
+            self.update_play_net()
 
-    def update_play_net(self, inform_map):
-        latest_model_file = inform_map[c_latest_model_file_key]
-        if latest_model_file != self.play_net_file:
-            print('%s: Experiment updated play net from [%s]' % (time.strftime("%Y-%m-%d %H:%M:%S"), latest_model_file))
-            self.play_net.load_parameters(latest_model_file, ctx=self.ctx)
-            self.play_net_file = latest_model_file
+    def update_play_net(self):
+        latest_version = self.coach_play_net_version.value
+        if latest_version > self.play_net_version:
+            print('%s: Experiment updated play net from %d to %d]' % (
+                time.strftime("%Y-%m-%d %H:%M:%S"), self.play_net_version, latest_version))
+            self.play_net.load_parameters(self.coach_play_net_file, ctx=self.ctx)
+            self.play_net_version = latest_version
         return
 
     def choose_action(self, phi):
@@ -127,10 +130,8 @@ class Experiment(object):
         pass
 
 
-
 if __name__ == '__main__':
     exp = Experiment()
     exp.start_train()
-
 
     pass

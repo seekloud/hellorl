@@ -6,11 +6,10 @@
 import multiprocessing as mp
 import queue
 
-import random
-import time
 import numpy as np
+
+from src.dqn2.config import PHI_LENGTH, GAME_NAME, OBSERVATION_TYPE, FRAME_SKIP, RANDOM_SEED
 from src.dqn2.game_env import GameEnv
-from src.dqn2.config import *
 
 
 def start_player(play_id: int,

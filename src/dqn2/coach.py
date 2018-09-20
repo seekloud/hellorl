@@ -5,18 +5,18 @@
 
 import queue
 import multiprocessing as mp
-from src.dqn2.config import *
 from src.dqn2.network import *
-from src.dqn2.config import *
+from src.dqn2.q_learning import QLearning
+from src.dqn2.replay_buffer import ReplayBuffer
 import src.utils as utils
 
 
 def start_coach(pre_trained_model_file: str,
                 experience_queue: queue.Queue,
-                shared_inform
+                play_net_version
                 ):
     # create coach, and start it.
-    coach = Coach(pre_trained_model_file, experience_queue, shared_inform)
+    coach = Coach(pre_trained_model_file, experience_queue, play_net_version)
     print('Coach begin.')
     coach.start()
     print('Coach finish.')
@@ -27,26 +27,24 @@ class Coach(object):
     def __init__(self,
                  model_file: str,
                  experience_queue: queue.Queue,
-                 shared_inform):
+                 shared_play_net_version):
         self.ctx = utils.try_gpu(GPU_INDEX)
-        self.policy_net = get_net(ACTION_NUM)
-        self.target_net = get_net(ACTION_NUM)
-
-        if model_file is not None:
-            print('%s: read trained model from [%s]' % (time.strftime("%Y-%m-%d %H:%M:%S"), model_file))
-            self.policy_net.load_parameters(model_file, ctx=self.ctx)
-
-        copy_parameters(self.policy_net, self.target_net)
+        self.replay_buffer = ReplayBuffer(HEIGHT, WIDTH, CHANNEL, PHI_LENGTH, DISCOUNT, RANDOM, BUFFER_MAX, self.ctx)
 
         self.experience_queue = experience_queue
-        self.shared_inform = shared_inform
+        self.shared_play_net_version = shared_play_net_version
         self.episode_count = 0
+        self.step_count = 0
         self.train_count = 0
+
+        self.q_learning = QLearning(self.ctx, model_file)
 
     def start(self):
         while True:
             self._read_experience()
             self._train()
+            if self.train_count % 10 == 0:
+                self._update_play_net()
 
     def _read_experience(self):
         count = 0
@@ -61,17 +59,27 @@ class Coach(object):
             else:
                 print('error experience_queue code:', experience)
                 break
-        print('Coach read episode [%d]' % count)
+        print('Coach read episode [%d], total step=[%d], total episode=[%d]' %
+              (count, self.step_count, self.episode_count))
 
     def _save_experience(self, experience):
         # experience = (step_count, images, actions, rewards)
+        (length, images, actions, rewards) = experience
+        self.replay_buffer.add_experience(length, images, actions, rewards)
+        self.step_count += length
         self.episode_count += 1
+        print('save steps: %d' % length)
+
+    def _train(self):
+        self.train_count += 1
         # TODO
         pass
 
-    def _train(self):
-        # TODO
-        pass
+    def _update_play_net(self):
+        file_path = PLAY_NET_MODEL_FILE
+        # delete file first?
+        save_model_to_file(self.q_learning.policy_net, file_path)
+        self.shared_play_net_version.value = self.train_count
 
 
 def foo(a: int, qu: queue.Queue):

@@ -8,6 +8,8 @@ import time
 import sys
 import configparser
 import os
+import mxnet
+import numpy
 
 
 def load_conf(conf_file):
@@ -101,6 +103,10 @@ print('--------------------------')
 
 FILE_PREFIX = dqn_conf.get('FILE_PREFIX')
 
+PLAY_NET_MODEL_FILE = dqn_conf.get('PLAY_NET_MODEL_FILE')
+
+RANDOM = numpy.random.RandomState(RANDOM_SEED)
+mxnet.random.seed(RANDOM_SEED)
 
 
 

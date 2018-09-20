@@ -29,11 +29,18 @@ def get_net(
     return net
 
 
-def save_params_to_file(net, name, postfix='model', prefix=FILE_PREFIX):
+def save_model(net, name, prefix=FILE_PREFIX, postfix='model'):
     time_mark = time.strftime("%Y%m%d_%H%M%S")
-    filename = MODEL_PATH + '/' + prefix + '_' + name + '_' + time_mark + '.' + postfix
-    net.save_parameters(filename)
-    print(time.strftime("%Y-%m-%d %H:%M:%S"), ' save model success:', filename)
+    file_path = MODEL_PATH + '/' + prefix + '_' + name + '_' + time_mark + '.' + postfix
+    net.save_parameters(file_path)
+    print(time.strftime("%Y-%m-%d %H:%M:%S"), ' save model success:', file_path)
+    return file_path
+
+
+def save_model_to_file(net, file_path):
+    net.save_parameters(file_path)
+    print(time.strftime("%Y-%m-%d %H:%M:%S"), ' save model success:', file_path)
+    return file_path
 
 
 def copy_parameters(src_net, dst_net):

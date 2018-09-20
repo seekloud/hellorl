@@ -5,7 +5,7 @@
 
 import gym
 from gym.envs.atari import AtariEnv
-from src.dqn2.config import *
+from src.dqn2.config import NEGATIVE_REWARD, POSITIVE_REWARD
 
 
 class GameEnv(object):
