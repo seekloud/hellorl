@@ -51,27 +51,22 @@ class Coach(object):
     def _read_experience(self):
         count = 0
         self.experience_queue.put(-1)
-        experience = self.experience_queue.get()
-        while not isinstance(experience, int):
-            self._save_experience(experience)
-            count += 1
-            experience = self.experience_queue.get()
         while True:
             experience = self.experience_queue.get()
             if not isinstance(experience, int):
+                count += 1
                 self._save_experience(experience)
             elif experience == -1:
                 break
             else:
                 print('error experience_queue code:', experience)
                 break
-        print('Coach read episode =', count)
+        print('Coach read episode [%d]' % count)
 
-    def _save_experience(self, experiencc):
-        # experience = (images, actions, rewards, terminals)
+    def _save_experience(self, experience):
+        # experience = (step_count, images, actions, rewards)
         self.episode_count += 1
         # TODO
-
         pass
 
     def _train(self):

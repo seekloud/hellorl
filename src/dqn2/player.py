@@ -50,7 +50,7 @@ class Player(object):
         images = []
         actions = []
         rewards = []
-        terminals = []
+        # terminals = []
 
         self.game.reset()
 
@@ -69,14 +69,14 @@ class Player(object):
             observation, reward, episode_done, lives, score = self.game.step(action)
             actions.append(action)
             rewards.append(reward)
-            terminals.append(episode_done)
+            # terminals.append(episode_done)
 
             episode_score += score
             step_count += 1
 
         # send experience to coach
         if step_count >= self.episode_steps_window.avg():
-            experience = (images, actions, rewards, terminals)
+            experience = (step_count, images, actions, rewards)
             self.experience_queue.put(experience)
 
         self.episode_steps_window.add(step_count)

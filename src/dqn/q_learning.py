@@ -36,6 +36,8 @@ class QLearning(object):
     def choose_action(self, state):
         shape0 = state.shape
         state = nd.array(state, ctx=self.ctx).reshape((1, -1, shape0[-2], shape0[-1]))
+        # FIXME state / 255.0
+
         out = self.policy_net(state)
         max_index = nd.argmax(out, axis=1)
         action = max_index.astype(np.int).asscalar()
