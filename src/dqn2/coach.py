@@ -9,6 +9,7 @@ from src.dqn2.network import *
 from src.dqn2.q_learning import QLearning
 from src.dqn2.replay_buffer import ReplayBuffer
 import src.utils as utils
+import os
 
 
 def start_coach(pre_trained_model_file: str,
@@ -17,7 +18,7 @@ def start_coach(pre_trained_model_file: str,
                 ):
     # create coach, and start it.
     coach = Coach(pre_trained_model_file, experience_queue, play_net_version)
-    print('Coach begin.')
+    print('+++++++++++++++++++ Coach begin.')
     coach.start()
     print('Coach finish.')
 
@@ -72,12 +73,16 @@ class Coach(object):
 
     def _train(self):
         self.train_count += 1
-        # TODO
-        pass
+        bs = BATCH_SIZE
+        images, actions, rewards, terminals = self.replay_buffer.random_batch(bs)
+        loss = self.q_learning.train_policy_net(bs, images, actions, rewards, terminals)
+        return loss
 
     def _update_play_net(self):
         file_path = PLAY_NET_MODEL_FILE
         # delete file first?
+        # if os.path.exists(file_path):
+        #     os.remove(file_path)
         save_model_to_file(self.q_learning.policy_net, file_path)
         self.shared_play_net_version.value = self.train_count
 

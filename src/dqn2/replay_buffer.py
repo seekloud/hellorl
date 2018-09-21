@@ -130,10 +130,10 @@ def test_add():
     buffer.add_experience(*get_experience(10))
     buffer.add_experience(*get_experience(10))
 
-    print('image:\n', buffer.images)
-    print('actions:\n', buffer.actions)
-    print('rewards:\n', buffer.rewards)
-    print('terminals:\n', buffer.terminals)
+    # print('image:\n', buffer.images)
+    # print('actions:\n', buffer.actions)
+    # print('rewards:\n', buffer.rewards)
+    # print('terminals:\n', buffer.terminals)
 
     print('capacity=', buffer.capacity)
     print('size=', buffer.size)

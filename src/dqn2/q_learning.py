@@ -30,7 +30,6 @@ class QLearning(object):
     def _update_target_net(self):
         copy_parameters(self.policy_net, self.target_net)
 
-
     def train_policy_net(self,
                          batch_size: int,
                          images: nd.NDArray,

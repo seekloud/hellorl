@@ -8,41 +8,52 @@ import queue
 
 import numpy as np
 
-from src.dqn2.config import PHI_LENGTH, GAME_NAME, OBSERVATION_TYPE, FRAME_SKIP, RANDOM_SEED
+from src.dqn2.config import PHI_LENGTH, GAME_NAME, OBSERVATION_TYPE, FRAME_SKIP, RANDOM_SEED, ACTION_NUM
 from src.dqn2.game_env import GameEnv
 
 
 def start_player(play_id: int,
                  observation_queue: queue.Queue,
                  action_in,
-                 experience_queue: queue.Queue
+                 experience_queue: queue.Queue,
+                 random_episode: int
                  ):
     # create player and start it.
-    print('create player [%d]' % play_id)
+    print('++++++++++++   create player [%d]' % play_id)
     player = Player(play_id, observation_queue, action_in, experience_queue)
+    count = 0
     while True:
-        player.run_episode()
+        if count < random_episode:
+            random_operation = True
+        else:
+            random_operation = False
+        player.run_episode(random_operation=random_operation)
+        count += 1
 
 
 class Player(object):
     def __init__(self,
                  play_id,
                  observation_queue: queue.Queue,
-                 action_in: mp.Pipe,
-                 experience_queue: queue.Queue):
+                 action_in,
+                 experience_queue: queue.Queue
+                 ):
         self.rng = np.random.RandomState(RANDOM_SEED + (play_id * 1000))
         self.game = GameEnv(game=GAME_NAME,
                             obs_type=OBSERVATION_TYPE,
                             frame_skip=FRAME_SKIP)
+        self.action_num = ACTION_NUM
         self.player_id = play_id
-        self.observation_queue = observation_queue
+        self.observation_queue: queue.Queue = observation_queue
         self.action_in = action_in
-        self.experience_queue = experience_queue
+
+        self.experience_queue: queue.Queue = experience_queue
 
         # self.episode_score_window = CirceBuffer(20)
         self.episode_steps_window = CirceBuffer(20)
+        self.episode_count = 0
 
-    def run_episode(self):
+    def run_episode(self, random_operation=False):
         episode_score = 0
         step_count = 0
 
@@ -51,23 +62,34 @@ class Player(object):
         rewards = []
         # terminals = []
 
-        self.game.reset()
+        observation = self.game.reset()
 
         # do no operation steps.
-        observation = None
-
-        max_no_op_steps = 20
+        max_no_op_steps = 5
         for _ in range(self.rng.randint(PHI_LENGTH, PHI_LENGTH + max_no_op_steps + 1)):
-            observation, _, _, _, _ = self.game.step(0)
+            obs = self.process_img(observation)
+            images.append(obs)
+            observation, reward, episode_done, lives, score = self.game.step(0)
+            actions.append(0)
+            rewards.append(reward)
 
         episode_done = False
         while not episode_done:
             phi = images[-PHI_LENGTH:]
-            action, q_val = self._choose_action(phi)
-            images.append(observation.tolist())
+
+            action, q_val = 0, 0.0
+
+            if random_operation:
+                action, q_val = self._random_action()
+            else:
+                action, q_val = self._choose_action(phi)
+
+            obs = self.process_img(observation)
+            images.append(obs)
             observation, reward, episode_done, lives, score = self.game.step(action)
             actions.append(action)
             rewards.append(reward)
+            # print('player step[%d] %d %f' % (step_count, action, reward))
             # terminals.append(episode_done)
 
             episode_score += score
@@ -80,12 +102,31 @@ class Player(object):
 
         self.episode_steps_window.add(step_count)
 
+        self.episode_count += 1
+
+        print('player[%d] finish episode[%d].' % (self.player_id, self.episode_count))
+
         return
 
     def _choose_action(self, phi):
+        # print('player [%d] send phi' % self.player_id)
         self.observation_queue.put((self.player_id, phi))
-        action, q_val = self.action_in.get()
+        # print('player [%d] waiting action...' % self.player_id)
+        msg = self.action_in.recv()
+        # print('msg:', msg)
+        action, q_val = msg
+        # print('player [%d] get action [%d]' % (self.player_id, action))
+
         return action, q_val
+
+    def _random_action(self):
+        action = self.rng.randint(0, self.action_num)
+        return action, 0.0
+
+    @staticmethod
+    def process_img(img):
+        img = img.transpose(2, 0, 1)
+        return img.tolist()
 
 
 class CirceBuffer(object):

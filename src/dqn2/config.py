@@ -72,7 +72,6 @@ UPDATE_TARGET_BY_EPISODE_BEGIN = dqn_conf.getint('UPDATE_TARGET_BY_EPISODE_BEGIN
 UPDATE_TARGET_DECAY = dqn_conf.getint('UPDATE_TARGET_DECAY')
 UPDATE_TARGET_RATE = (UPDATE_TARGET_BY_EPISODE_END - UPDATE_TARGET_BY_EPISODE_BEGIN) / UPDATE_TARGET_DECAY + 0.000001
 
-
 OPTIMIZER = dqn_conf.get('OPTIMIZER')
 LEARNING_RATE = dqn_conf.getfloat('LEARNING_RATE')
 WEIGHT_DECAY = dqn_conf.getfloat('WEIGHT_DECAY')
@@ -88,25 +87,26 @@ BEGIN_TIME = time.strftime("%Y%m%d_%H%M%S")
 
 EDITED_TIME = dqn_conf.get("EDITED_TIME")
 
-print('\n\n\n\n++++++++++++++++ config edited time: %s ++++++++++++++++++' % EDITED_TIME)
-print('BEGIN_TIME:', BEGIN_TIME)
-print('CONF FILE:', customer_conf_file)
-print('GAME_NAME:', GAME_NAME)
-print('--------------------------')
-
-print('configuration:')
-for conf_k, conf_v in dqn_conf.items():
-    print('[%s = %s]' % (conf_k, conf_v))
-
-print('--------------------------')
-
+# print('\n\n\n\n++++++++++++++++ config edited time: %s ++++++++++++++++++' % EDITED_TIME)
+# print('BEGIN_TIME:', BEGIN_TIME)
+# print('CONF FILE:', customer_conf_file)
+# print('GAME_NAME:', GAME_NAME)
+# print('--------------------------')
+#
+# print('configuration:')
+# for conf_k, conf_v in dqn_conf.items():
+#     print('[%s = %s]' % (conf_k, conf_v))
+#
+# print('--------------------------')
 
 FILE_PREFIX = dqn_conf.get('FILE_PREFIX')
 
 PLAY_NET_MODEL_FILE = dqn_conf.get('PLAY_NET_MODEL_FILE')
 
+BATCH_SIZE = 32
+PLAYER_NUM = 5
+
+RANDOM_EPISODE_PER_PLAYER = 3
+
 RANDOM = numpy.random.RandomState(RANDOM_SEED)
 mxnet.random.seed(RANDOM_SEED)
-
-
-
