@@ -5,7 +5,7 @@
 
 import multiprocessing as mp
 import queue
-
+import threading
 import numpy as np
 
 from src.dqn2.config import PHI_LENGTH, GAME_NAME, OBSERVATION_TYPE, FRAME_SKIP, RANDOM_SEED, ACTION_NUM
@@ -15,12 +15,13 @@ from src.dqn2.game_env import GameEnv
 def start_player(play_id: int,
                  observation_queue: queue.Queue,
                  action_in,
-                 experience_queue: queue.Queue,
-                 random_episode: int
+                 experience_out,
+                 random_episode: int,
+                 experience_lock: threading.Lock
                  ):
     # create player and start it.
     print('++++++++++++   create player [%d]' % play_id)
-    player = Player(play_id, observation_queue, action_in, experience_queue)
+    player = Player(play_id, observation_queue, action_in, experience_out, experience_lock)
     count = 0
     while True:
         if count < random_episode:
@@ -36,7 +37,8 @@ class Player(object):
                  play_id,
                  observation_queue: queue.Queue,
                  action_in,
-                 experience_queue: queue.Queue
+                 experience_out,
+                 experience_lock: threading.Lock
                  ):
         self.rng = np.random.RandomState(RANDOM_SEED + (play_id * 1000))
         self.game = GameEnv(game=GAME_NAME,
@@ -47,7 +49,8 @@ class Player(object):
         self.observation_queue: queue.Queue = observation_queue
         self.action_in = action_in
 
-        self.experience_queue: queue.Queue = experience_queue
+        self.experience_out = experience_out
+        self.experience_lock = experience_lock
 
         # self.episode_score_window = CirceBuffer(20)
         self.episode_steps_window = CirceBuffer(20)
@@ -96,9 +99,15 @@ class Player(object):
             step_count += 1
 
         # send experience to coach
-        if step_count >= self.episode_steps_window.avg():
-            experience = (step_count, images, actions, rewards)
-            self.experience_queue.put(experience)
+        if step_count >= 0:  # FIXME just for test.
+            # if step_count >= self.episode_steps_window.avg():
+            experience = (self.player_id, len(images), images, actions, rewards)
+            print('player[%d] send experience to coach. length=%d' % (self.player_id, len(images)))
+
+            if self.experience_lock.acquire():
+                self.experience_out.send(experience)
+                self.experience_lock.release()
+            # self.experience_queue.put(experience)
 
         self.episode_steps_window.add(step_count)
 

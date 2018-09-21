@@ -27,7 +27,7 @@ class Experiment(object):
         self.play_net_version = -1
         self.play_net = get_net(ACTION_NUM, self.ctx)
 
-        self.coach_play_net_version = mp.Value('i', -1)
+        self.coach_play_net_version = None
         self.coach_play_net_file = PLAY_NET_MODEL_FILE
 
         if self.model_file is not None:
@@ -44,9 +44,13 @@ class Experiment(object):
         pool = mp.Pool(worker_num + 1)
         manager = mp.Manager()
 
+        experience_send_lock = manager.Lock()
+        self.coach_play_net_version = manager.Value('i', -1)
+
         player_observation_queue: queue.Queue = manager.Queue()
 
-        experience_queue = manager.Queue()
+        # experience_queue = manager.Queue()
+        experience_in, experience_out = mp.Pipe()
 
         player_action_outs = dict()
         players = range(1, worker_num + 1)
@@ -57,22 +61,25 @@ class Experiment(object):
 
         # start players
         for player_id in players:
-            print('set player:', player_id)
+            # print('set player:', player_id)
             action_in, action_out = mp.Pipe()
             pool.apply_async(start_player,
                              (player_id,
                               player_observation_queue,
                               action_in,
-                              experience_queue,
-                              random_episode)
+                              experience_out,
+                              random_episode,
+                              experience_send_lock)
                              )
 
             player_action_outs[player_id] = action_out
             print('player:', player_id, ' created.')
 
         # start coach
-        pool.apply_async(start_coach, (self.model_file, experience_queue, self.coach_play_net_version))
-
+        print('1111111111111111')
+        pool.apply_async(start_coach, (self.model_file, experience_in, self.coach_play_net_version))
+        print('222222222222222')
+        pool.close()
         # process player observations
         while True:
             player_list = []
