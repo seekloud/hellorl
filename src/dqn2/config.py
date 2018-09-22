@@ -66,6 +66,7 @@ DISCOUNT = dqn_conf.getfloat('DISCOUNT')
 EPSILON_MIN = dqn_conf.getfloat('EPSILON_MIN')
 EPSILON_START = dqn_conf.getfloat('EPSILON_START')
 EPSILON_DECAY = dqn_conf.getint('EPSILON_DECAY')
+EPSILON_RATE = (EPSILON_START - EPSILON_MIN) * 1.0 / EPSILON_DECAY
 
 UPDATE_TARGET_BY_EPISODE_END = dqn_conf.getint('UPDATE_TARGET_BY_EPISODE_END')
 UPDATE_TARGET_BY_EPISODE_BEGIN = dqn_conf.getint('UPDATE_TARGET_BY_EPISODE_BEGIN')
@@ -82,31 +83,35 @@ NEGATIVE_REWARD = dqn_conf.getfloat('NEGATIVE_REWARD')
 
 """OTHER"""
 MODEL_PATH = dqn_conf.get('MODEL_PATH')
-MODEL_FILE_MARK = dqn_conf.get('MODEL_FILE_MARK')
 BEGIN_TIME = time.strftime("%Y%m%d_%H%M%S")
 
 EDITED_TIME = dqn_conf.get("EDITED_TIME")
 
-# print('\n\n\n\n++++++++++++++++ config edited time: %s ++++++++++++++++++' % EDITED_TIME)
-# print('BEGIN_TIME:', BEGIN_TIME)
-# print('CONF FILE:', customer_conf_file)
-# print('GAME_NAME:', GAME_NAME)
-# print('--------------------------')
-#
-# print('configuration:')
-# for conf_k, conf_v in dqn_conf.items():
-#     print('[%s = %s]' % (conf_k, conf_v))
-#
-# print('--------------------------')
-
 FILE_PREFIX = dqn_conf.get('FILE_PREFIX')
+PLAY_NET_MODEL_FILE = MODEL_PATH + '/' + FILE_PREFIX + GAME_NAME + '_' + BEGIN_TIME + '.play_net'
 
-PLAY_NET_MODEL_FILE = dqn_conf.get('PLAY_NET_MODEL_FILE')
+BATCH_SIZE = dqn_conf.getint('BATCH_SIZE')
+PLAYER_NUM = dqn_conf.getint('PLAYER_NUM')
 
-BATCH_SIZE = 32
-PLAYER_NUM = 5
+RANDOM_EPISODE_PER_PLAYER = dqn_conf.getint('RANDOM_EPISODE_PER_PLAYER')
+PLAY_NET_UPDATE_INTERVAL = dqn_conf.getint('PLAY_NET_UPDATE_INTERVAL')
 
-RANDOM_EPISODE_PER_PLAYER = 100
+TARGET_NET_UPDATE_INTERVAL = dqn_conf.getint('TARGET_NET_UPDATE_INTERVAL')
+POLICY_NET_SAVE_INTERVAL = dqn_conf.getint('POLICY_NET_SAVE_INTERVAL')
 
 RANDOM = numpy.random.RandomState(RANDOM_SEED)
 mxnet.random.seed(RANDOM_SEED)
+
+
+def print_conf():
+    print('\n\n\n\n++++++++++++++++ config edited time: %s ++++++++++++++++++' % EDITED_TIME)
+    print('BEGIN_TIME:', BEGIN_TIME)
+    print('CONF FILE:', customer_conf_file)
+    print('GAME_NAME:', GAME_NAME)
+    print('--------------------------')
+
+    print('configuration:')
+    for conf_k, conf_v in dqn_conf.items():
+        print('[%s = %s]' % (conf_k, conf_v))
+
+    print('--------------------------')

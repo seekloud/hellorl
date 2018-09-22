@@ -78,8 +78,9 @@ def try_gpu(idx=0):
             ctx = mx.gpu(idx)
             _ = nd.array([0], ctx=ctx)
             print('Got GPU[%d] success.' % idx)
-        except:
-            print('Got GPU[%d] failed, use CPU.' % idx)
+        except Exception as e:
+            print('Got GPU[%d] failed: %s \n %s' % (idx, str(e.__cause__), str(e)))
+            print('USE CPU.')
             ctx = mx.cpu()
     return ctx
 

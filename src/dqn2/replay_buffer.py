@@ -83,8 +83,11 @@ class ReplayBuffer(object):
             end = self.top
         end = end - self.phi_length
 
-        indices = nd.random.uniform(begin, end, (batch_size,)).astype('int32')
+        # indices = nd.random.uniform(begin, end, (batch_size,), ctx=self.ctx).astype('int32')
+        indices_list = np.random.uniform(begin, end, (batch_size,)).astype('int32')
+        indices = nd.array(indices_list, ctx=self.ctx).astype('int32')
 
+        print('1111111111111111111111111111')
         images = nd.zeros((batch_size,
                            self.phi_length + 1,
                            self.channel,
@@ -93,7 +96,7 @@ class ReplayBuffer(object):
                           dtype='uint8',
                           ctx=self.ctx)
 
-        indices_list = indices.asnumpy().tolist()
+        print('images shape=', images.shape, images.dtype)
 
         for i in range(batch_size):
             target_begin = indices_list[i]

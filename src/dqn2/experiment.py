@@ -40,6 +40,7 @@ def listen_player(player_id,
 class Experiment(object):
 
     def __init__(self):
+        mp.set_start_method('spawn')
 
         self.model_file = PRE_TRAIN_MODEL_FILE
         self.ctx = utils.try_gpu(GPU_INDEX)
@@ -57,6 +58,7 @@ class Experiment(object):
             self.play_net.load_parameters(self.model_file, ctx=self.ctx)
 
         self.step_count = 0
+        print_conf()
         return
 
     def start_train(self):
@@ -114,13 +116,17 @@ class Experiment(object):
             obs_len = len(observation_list)
             if obs_len > 0:
                 # print('Exp observation_list: ', len(observation_list))
+                t0 = time.time()
                 action_list, max_q_list = self.choose_batch_action(observation_list)
+                t1 = time.time()
                 for p, action, q_value in zip(player_list, action_list, max_q_list):
                     # print('Exp send action[%d] to player[%d]' % (action, p))
                     out_pipe = player_action_outs[p]
                     out_pipe.send((action, q_value))
                 self.step_count += len(player_list)
-                # print('experiment get observations count=', len(player_list))
+                t2 = time.time()
+                # print('experiment get choose_batch_action for [%d] players, choose time=%.2f, send time=%.2f' %
+                #       (len(player_list), (t1 - t0), (t2 - t1)))
                 # print('-----------------------------------')
 
             self.update_play_net()
@@ -166,6 +172,7 @@ class Experiment(object):
     #     return action
 
     def choose_batch_action(self, phi_list):
+
         batch_input = nd.array(phi_list, ctx=self.ctx)
 
         # print('choose_batch_action batch_input.shape', batch_input.shape)

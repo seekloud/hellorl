@@ -8,7 +8,7 @@ import queue
 import threading
 import numpy as np
 
-from src.dqn2.config import PHI_LENGTH, GAME_NAME, OBSERVATION_TYPE, FRAME_SKIP, RANDOM_SEED, ACTION_NUM
+from src.dqn2.config import *
 from src.dqn2.game_env import GameEnv
 
 
@@ -50,6 +50,8 @@ class Player(object):
         # self.episode_score_window = CirceBuffer(20)
         self.episode_steps_window = CirceBuffer(20)
         self.episode_count = 0
+        self.rng = RANDOM
+        self.epsilon = EPSILON_START
 
     def run_episode(self, random_operation=False):
         episode_score = 0
@@ -111,13 +113,20 @@ class Player(object):
         return
 
     def _choose_action(self, phi):
-        #print('player [%d] send phi' % self.player_id)
-        self.action_chooser.send(phi)
-        #print('player [%d] waiting action...' % self.player_id)
-        msg = self.action_chooser.recv()
-        #print('msg:', msg)
-        action, q_val = msg
-        #print('player [%d] got action [%d]' % (self.player_id, action))
+
+        self.epsilon = max(EPSILON_MIN, self.epsilon - EPSILON_RATE)
+
+        if self.rng.rand() < self.epsilon:
+            action = self.rng.randint(0, self.action_num)
+            q_val = 0.0
+        else:
+            # print('player [%d] send phi' % self.player_id)
+            self.action_chooser.send(phi)
+            # print('player [%d] waiting action...' % self.player_id)
+            msg = self.action_chooser.recv()
+            # print('msg:', msg)
+            action, q_val = msg
+            # print('player [%d] got action [%d]' % (self.player_id, action))
 
         return action, q_val
 
