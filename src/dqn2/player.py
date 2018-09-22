@@ -13,15 +13,13 @@ from src.dqn2.game_env import GameEnv
 
 
 def start_player(play_id: int,
-                 observation_queue: queue.Queue,
-                 action_in,
+                 action_chooser,
                  experience_out,
-                 random_episode: int,
-                 experience_lock: threading.Lock
+                 random_episode: int
                  ):
     # create player and start it.
     print('++++++++++++   create player [%d]' % play_id)
-    player = Player(play_id, observation_queue, action_in, experience_out, experience_lock)
+    player = Player(play_id, action_chooser, experience_out)
     count = 0
     while True:
         if count < random_episode:
@@ -35,10 +33,8 @@ def start_player(play_id: int,
 class Player(object):
     def __init__(self,
                  play_id,
-                 observation_queue: queue.Queue,
-                 action_in,
-                 experience_out,
-                 experience_lock: threading.Lock
+                 action_chooser,
+                 experience_out
                  ):
         self.rng = np.random.RandomState(RANDOM_SEED + (play_id * 1000))
         self.game = GameEnv(game=GAME_NAME,
@@ -46,11 +42,10 @@ class Player(object):
                             frame_skip=FRAME_SKIP)
         self.action_num = ACTION_NUM
         self.player_id = play_id
-        self.observation_queue: queue.Queue = observation_queue
-        self.action_in = action_in
+
+        self.action_chooser = action_chooser
 
         self.experience_out = experience_out
-        self.experience_lock = experience_lock
 
         # self.episode_score_window = CirceBuffer(20)
         self.episode_steps_window = CirceBuffer(20)
@@ -104,9 +99,7 @@ class Player(object):
             experience = (self.player_id, len(images), images, actions, rewards)
             print('player[%d] send experience to coach. length=%d' % (self.player_id, len(images)))
 
-            if self.experience_lock.acquire():
-                self.experience_out.send(experience)
-                self.experience_lock.release()
+            self.experience_out.send(experience)
             # self.experience_queue.put(experience)
 
         self.episode_steps_window.add(step_count)
@@ -118,13 +111,13 @@ class Player(object):
         return
 
     def _choose_action(self, phi):
-        # print('player [%d] send phi' % self.player_id)
-        self.observation_queue.put((self.player_id, phi))
-        # print('player [%d] waiting action...' % self.player_id)
-        msg = self.action_in.recv()
-        # print('msg:', msg)
+        #print('player [%d] send phi' % self.player_id)
+        self.action_chooser.send(phi)
+        #print('player [%d] waiting action...' % self.player_id)
+        msg = self.action_chooser.recv()
+        #print('msg:', msg)
         action, q_val = msg
-        # print('player [%d] get action [%d]' % (self.player_id, action))
+        #print('player [%d] got action [%d]' % (self.player_id, action))
 
         return action, q_val
 

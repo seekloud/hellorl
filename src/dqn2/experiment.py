@@ -16,6 +16,26 @@ from src.dqn2.config import *
 from src.dqn2.network import get_net
 from src.dqn2.player import start_player
 
+import threading
+
+
+def error_handle(name):
+    def func(e: Exception):
+        print('[%s] error happen: %s' % (name, str(e.__cause__)))
+
+    return func
+
+
+def listen_player(player_id,
+                  player_agent,
+                  merge_queue: queue.Queue,
+                  queue_lock: threading.Lock):
+    print('Experiment listen_player by: ', threading.current_thread().name)
+    while True:
+        observation = player_agent.recv()
+        with queue_lock:
+            merge_queue.put((player_id, observation))
+
 
 class Experiment(object):
 
@@ -26,6 +46,8 @@ class Experiment(object):
 
         self.play_net_version = -1
         self.play_net = get_net(ACTION_NUM, self.ctx)
+        self.local_observation_queue = queue.Queue()
+        self.obs_queue_lock = threading.Lock()
 
         self.coach_play_net_version = None
         self.coach_play_net_file = PLAY_NET_MODEL_FILE
@@ -44,15 +66,12 @@ class Experiment(object):
         pool = mp.Pool(worker_num + 1)
         manager = mp.Manager()
 
-        experience_send_lock = manager.Lock()
         self.coach_play_net_version = manager.Value('i', -1)
 
-        player_observation_queue: queue.Queue = manager.Queue()
-
         # experience_queue = manager.Queue()
-        experience_in, experience_out = mp.Pipe()
 
         player_action_outs = dict()
+        experience_in_list = []
         players = range(1, worker_num + 1)
 
         random_episode = RANDOM_EPISODE_PER_PLAYER
@@ -62,52 +81,62 @@ class Experiment(object):
         # start players
         for player_id in players:
             # print('set player:', player_id)
-            action_in, action_out = mp.Pipe()
+            player_agent, action_chooser = mp.Pipe()
+            experience_in, experience_out = mp.Pipe()
+
             pool.apply_async(start_player,
                              (player_id,
-                              player_observation_queue,
-                              action_in,
+                              action_chooser,
                               experience_out,
-                              random_episode,
-                              experience_send_lock)
+                              random_episode
+                              ),
+                             error_callback=error_handle("start_player")
                              )
 
-            player_action_outs[player_id] = action_out
+            player_action_outs[player_id] = player_agent
+            experience_in_list.append(experience_in)
+            t = threading.Thread(target=listen_player,
+                                 args=(player_id, player_agent, self.local_observation_queue, self.obs_queue_lock),
+                                 name='player_' + str(player_id))
+            t.start()
             print('player:', player_id, ' created.')
 
         # start coach
-        print('1111111111111111')
-        pool.apply_async(start_coach, (self.model_file, experience_in, self.coach_play_net_version))
-        print('222222222222222')
+        pool.apply_async(start_coach,
+                         (self.model_file,
+                          experience_in_list,
+                          self.coach_play_net_version),
+                         error_callback=error_handle("start_coach"))
         pool.close()
         # process player observations
         while True:
-            player_list = []
-            observation_list = []
-            player_observation_queue.put((-1, 0))
-            while True:
-                player_id, observation = player_observation_queue.get()
-                if player_id == -1:
-                    break
-                else:
-                    print('Exp got req from player[%d]' % player_id)
-                    observation_list.append(observation)
-                    player_list.append(player_id)
-
+            player_list, observation_list = self._read_observations()
             obs_len = len(observation_list)
             if obs_len > 0:
-                print('observation_list: ', len(observation_list))
-
+                # print('Exp observation_list: ', len(observation_list))
                 action_list, max_q_list = self.choose_batch_action(observation_list)
                 for p, action, q_value in zip(player_list, action_list, max_q_list):
-                    print('Exp send action[%d] to player[%d]' % (action, p))
+                    # print('Exp send action[%d] to player[%d]' % (action, p))
                     out_pipe = player_action_outs[p]
                     out_pipe.send((action, q_value))
                 self.step_count += len(player_list)
                 # print('experiment get observations count=', len(player_list))
-                print('-----------------------------------')
+                # print('-----------------------------------')
 
             self.update_play_net()
+
+    def _read_observations(self):
+        player_list = []
+        observation_list = []
+        qu = self.local_observation_queue
+        if not qu.empty():
+            with self.obs_queue_lock:
+                while not qu.empty():
+                    player_id, observation = self.local_observation_queue.get()
+                    # print('Exp got req from player[%d]' % player_id)
+                    observation_list.append(observation)
+                    player_list.append(player_id)
+        return player_list, observation_list
 
     def update_play_net(self):
         latest_version = self.coach_play_net_version.value
@@ -139,7 +168,7 @@ class Experiment(object):
     def choose_batch_action(self, phi_list):
         batch_input = nd.array(phi_list, ctx=self.ctx)
 
-        print('choose_batch_action batch_input.shape', batch_input.shape)
+        # print('choose_batch_action batch_input.shape', batch_input.shape)
 
         shape0 = batch_input.shape
         state = nd.array(batch_input, ctx=self.ctx).reshape((shape0[0], -1, shape0[-2], shape0[-1]))
