@@ -103,7 +103,7 @@ RANDOM = numpy.random.RandomState(RANDOM_SEED)
 mxnet.random.seed(RANDOM_SEED)
 
 
-def print_conf():
+def _print_conf():
     print('\n\n\n\n++++++++++++++++ config edited time: %s ++++++++++++++++++' % EDITED_TIME)
     print('BEGIN_TIME:', BEGIN_TIME)
     print('CONF FILE:', customer_conf_file)

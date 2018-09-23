@@ -3,13 +3,11 @@
 # Time  : 10:56 PM
 # FileName: player.py
 
-import multiprocessing as mp
-import queue
-import threading
 import numpy as np
 
 from src.dqn2.config import *
 from src.dqn2.game_env import GameEnv
+from src.ztutils import CirceBuffer
 
 
 def start_player(play_id: int,
@@ -18,23 +16,19 @@ def start_player(play_id: int,
                  random_episode: int
                  ):
     # create player and start it.
-    print('++++++++++++   create player [%d]' % play_id)
-    player = Player(play_id, action_chooser, experience_out)
-    count = 0
-    while True:
-        if count < random_episode:
-            random_operation = True
-        else:
-            random_operation = False
-        player.run_episode(random_operation=random_operation)
-        count += 1
+    pid = os.getpid()
+    ppid = os.getppid()
+    print('++++++++++++   Player[%d] starting. pid=[%s] ppid=[%s] ' % (play_id, str(pid), str(ppid)))
+    player = Player(play_id, action_chooser, experience_out, random_episode)
+    player.start()
 
 
 class Player(object):
     def __init__(self,
                  play_id,
                  action_chooser,
-                 experience_out
+                 experience_out,
+                 random_episode=10
                  ):
         self.rng = np.random.RandomState(RANDOM_SEED + (play_id * 1000))
         self.game = GameEnv(game=GAME_NAME,
@@ -42,6 +36,7 @@ class Player(object):
                             frame_skip=FRAME_SKIP)
         self.action_num = ACTION_NUM
         self.player_id = play_id
+        self.random_episode = random_episode
 
         self.action_chooser = action_chooser
 
@@ -54,13 +49,13 @@ class Player(object):
         self.epsilon = EPSILON_START
 
     def run_episode(self, random_operation=False):
-        episode_score = 0
-        step_count = 0
+        ep_reward = 0.0
+        ep_score = 0
+        ep_step = 0
 
         images = []
         actions = []
         rewards = []
-        # terminals = []
 
         observation = self.game.reset()
 
@@ -74,6 +69,7 @@ class Player(object):
             rewards.append(reward)
 
         episode_done = False
+        t0 = time.time()
         while not episode_done:
             phi = images[-PHI_LENGTH:]
 
@@ -90,13 +86,13 @@ class Player(object):
             actions.append(action)
             rewards.append(reward)
             # print('player step[%d] %d %f' % (step_count, action, reward))
-            # terminals.append(episode_done)
+            ep_reward += reward
+            ep_score += score
+            ep_step += 1
 
-            episode_score += score
-            step_count += 1
-
+        t1 = time.time()
         # send experience to coach
-        if step_count >= 0:  # FIXME just for test.
+        if ep_step >= 0:  # FIXME just for test.
             # if step_count >= self.episode_steps_window.avg():
             experience = (self.player_id, len(images), images, actions, rewards)
             print('player[%d] send experience to coach. length=%d' % (self.player_id, len(images)))
@@ -104,13 +100,35 @@ class Player(object):
             self.experience_out.send(experience)
             # self.experience_queue.put(experience)
 
-        self.episode_steps_window.add(step_count)
+        self.episode_steps_window.add(ep_step)
 
         self.episode_count += 1
 
-        print('player[%d] finish episode[%d].' % (self.player_id, self.episode_count))
+        print('Player[%d] Episode[%d] done: time=%.3f step=%d score=%d reward=%.3f' %
+              (self.player_id,
+               self.episode_count,
+               (t1 - t0),
+               ep_step,
+               ep_score,
+               ep_reward
+               ))
 
         return
+
+    def start(self):
+        count = 0
+        while True:
+            if count < self.random_episode:
+                random_operation = True
+            else:
+                random_operation = False
+            try:
+                self.run_episode(random_operation=random_operation)
+                count += 1
+            except Exception as e:
+                print('player[%d] got exception:%s, %s' % (self.player_id, str(e), str(e.__cause__)))
+                break
+        print('[ WARNING ] ---- !!!!!!!!!! Player[%d] stop.' % self.player_id)
 
     def _choose_action(self, phi):
 
@@ -138,39 +156,6 @@ class Player(object):
     def process_img(img):
         img = img.transpose(2, 0, 1)
         return img.tolist()
-
-
-class CirceBuffer(object):
-    def __init__(self, capacity: int):
-        assert capacity > 0
-        self._capacity = capacity
-        self._list = []
-        self._begin = 0
-        self._sum = 0.0
-
-    def add(self, num: float):
-        self._sum += num
-        if self.size() < self._capacity:
-            self._list.append(num)
-        else:
-            self._sum -= self._list[self._begin]
-            self._list[self._begin] = num
-            self._begin = (self._begin + 1) % self._capacity
-
-    def avg(self):
-        length = self.size()
-        if length > 0:
-            return self._sum / length
-        else:
-            return 0.0
-
-    def size(self):
-        return len(self._list)
-
-    def clean(self):
-        self._begin = 0
-        self._sum = 0.0
-        self._list = []
 
 
 def test_circe_buffer():
