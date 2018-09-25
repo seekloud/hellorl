@@ -3,6 +3,7 @@
 # Time  : 11:26 PM
 # FileName: ztutils.py
 import os
+import numpy as np
 
 
 def mkdir_if_not_exist(path):
@@ -42,3 +43,7 @@ class CirceBuffer(object):
         self._begin = 0
         self._sum = 0.0
         self._list = []
+
+
+def tonumpyarray(mp_arr, shape: tuple, dtype=np.float32):
+    return np.frombuffer(mp_arr.get_obj(), dtype=dtype).reshape(shape)

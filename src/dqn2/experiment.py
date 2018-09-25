@@ -23,7 +23,7 @@ import signal
 
 def error_handle(name):
     def func(e: Exception):
-        print('!!!!!!!!!!!    [%s] error happen: %s' % (name, str(e.__cause__)))
+        print('!!!!!!!!!!!    [%s] error happen: %s, %s' % (name, str(e), str(e.__cause__)))
 
     return func
 
@@ -37,7 +37,14 @@ def listen_player(player_id,
         merge_queue.put((player_id, observation))
 
 
-def term():
+_killed = False
+
+
+def term(sig_num, addtion):
+    print('sig_num', sig_num)
+    print('addtion', addtion)
+    global _killed
+    _killed = True
     print(' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Experiment got kill -15')
 
 
@@ -55,14 +62,25 @@ class Experiment(object):
         self.play_net = get_net(ACTION_NUM, self.ctx)
         self.local_observation_queue = queue.Queue()
 
-        self.coach_play_net_version = None
         self.coach_play_net_file = PLAY_NET_MODEL_FILE
+        self.step_count = 0
 
         if self.model_file is not None:
             print('%s: Experiment read trained model from [%s]' % (time.strftime("%Y-%m-%d %H:%M:%S"), self.model_file))
             self.play_net.load_parameters(self.model_file, ctx=self.ctx)
 
-        self.step_count = 0
+        if os.name == 'nt':
+            mp_method = 'spawn'
+        elif os.name == 'posix':
+            mp_method = 'forkserver'
+        else:
+            mp_method = 'forkserver'
+
+        print('multiprocessing context method: ', mp_method)
+        self.mp_ctx = multiprocessing.get_context(method=mp_method)
+        manager = self.mp_ctx.Manager()
+        self.coach_play_net_version = manager.Value('i', -1)
+
         _print_conf()
         return
 
@@ -70,12 +88,9 @@ class Experiment(object):
         signal.signal(signal.SIGTERM, term)
         print('+++++++++++++++++   start_train')
         worker_num = PLAYER_NUM
-        mp_ctx = multiprocessing.get_context('forkserver')
-        pool = mp_ctx.Pool(worker_num + 1)
+        # multiprocessing.get_context can not work on windows???
 
-        manager = mp_ctx.Manager()
-
-        self.coach_play_net_version = manager.Value('i', -1)
+        pool = self.mp_ctx.Pool(worker_num + 1)
 
         # experience_queue = manager.Queue()
 
@@ -90,8 +105,8 @@ class Experiment(object):
         # start players
         for player_id in players:
             # print('set player:', player_id)
-            player_agent, action_chooser = mp_ctx.Pipe()
-            experience_in, experience_out = mp_ctx.Pipe()
+            player_agent, action_chooser = self.mp_ctx.Pipe()
+            experience_in, experience_out = self.mp_ctx.Pipe()
 
             pool.apply_async(start_player,
                              (player_id,
@@ -123,7 +138,7 @@ class Experiment(object):
         # process player observations
 
         try:
-            while True:
+            while not _killed:
                 player_list, observation_list = self._read_observations()
                 obs_len = len(observation_list)
                 if obs_len > 0:
@@ -162,34 +177,16 @@ class Experiment(object):
     def update_play_net(self):
         latest_version = self.coach_play_net_version.value
         if latest_version > self.play_net_version:
-            t0 = time.time()
+            # t0 = time.time()
             self.play_net.load_parameters(self.coach_play_net_file, ctx=self.ctx)
-            t1 = time.time()
-            print('%s: Experiment loaded play net from [%d] to [%d], time=%.3f]' % (
-                time.strftime("%Y-%m-%d %H:%M:%S"),
-                self.play_net_version,
-                latest_version,
-                t1 - t0))
+            # t1 = time.time()
+            # print('%s: Experiment loaded play net from [%d] to [%d], time=%.3f]' % (
+            #     time.strftime("%Y-%m-%d %H:%M:%S"),
+            #     self.play_net_version,
+            #     latest_version,
+            #     t1 - t0))
             self.play_net_version = latest_version
         return
-
-    # def choose_action(self, phi):
-    #     shape0 = phi.shape
-    #     state = nd.array(phi, ctx=self.ctx).reshape((1, -1, shape0[-2], shape0[-1]))
-    #     out = self.play_net(state)
-    #     max_index = nd.argmax(out, axis=1)
-    #     action = max_index.astype(np.int).asscalar()
-    #     # print('state:', state)
-    #     # print('state s:', state.shape)
-    #     # print('out:', out)
-    #     # print('out s:', out.shape)
-    #     # print('max_index:', max_index)
-    #     # print('max_index s:', max_index.shape)
-    #     # print('action:', action)
-    #     # print('action type:', type(action))
-    #
-    #     max_q = out[0, action].asscalar()
-    #     return action
 
     def choose_batch_action(self, phi_list):
         batch_input = nd.array(phi_list, ctx=self.ctx)

@@ -18,7 +18,7 @@ def test():
     c = np.row_stack((a, b))
 
     t0 = time.time()
-    for i in range(1000):
+    for i in range(20):
         c = np.row_stack((c, b))
     t1 = time.time()
 

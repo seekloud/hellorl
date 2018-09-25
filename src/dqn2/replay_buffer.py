@@ -4,10 +4,43 @@
 # FileName: replay_buffer.py
 
 
-import mxnet as mx
-from mxnet import nd
-import numpy as np
 import time
+
+import mxnet as mx
+import numpy as np
+from mxnet import nd
+
+import multiprocessing as mp
+
+from src.dqn2.shared_utils import create_shared_data, to_np_array
+
+
+def fix_capacity(capacity):
+    mod = capacity % 8
+    if mod == 0:
+        rst = capacity
+    else:
+        rst = capacity + (8 - mod)
+    return rst
+
+
+def create_replay_buffer_data(height: int,
+                              width: int,
+                              channel: int,
+                              phi_length: int,
+                              capacity: int,
+                              mp_ctx):
+    capacity = fix_capacity(capacity)
+    img_shape = (capacity, channel, height, width)
+    image_data = create_shared_data(mp_ctx, img_shape, 'uint8')
+    action_data = create_shared_data(mp_ctx, (capacity,), dtype='uint8')
+    reward_data = create_shared_data(mp_ctx, (capacity,), dtype='float32')
+    terminal_data = create_shared_data(mp_ctx, (capacity,), dtype='int8')
+    top_value = mp_ctx.Value('i', 0)
+    size_value = mp_ctx.Value('i', 0)
+    buffer_lock = mp_ctx.Lock()
+
+    return image_data, action_data, reward_data, terminal_data, top_value, size_value, buffer_lock
 
 
 class ReplayBuffer(object):
@@ -16,71 +49,70 @@ class ReplayBuffer(object):
                  width: int,
                  channel: int,
                  phi_length: int,
-                 discount: float,
-                 rng: np.random.RandomState,
-                 capacity: int):
+                 capacity: int,
+                 data: tuple):
+        capacity = fix_capacity(capacity)
+
+        image_data, action_data, reward_data, terminal_data, top_value, size_value, buffer_lock = data
 
         self.width = width
         self.height = height
         self.channel = channel
         self.capacity = capacity
         self.phi_length = phi_length
-        self.discount = discount
-        self.rng = rng
+        self.rng = np.random
 
-        self.images = np.zeros((capacity, channel, height, width), dtype='uint8')
-        self.actions = np.zeros((capacity,), dtype='uint8')
-        self.rewards = np.zeros((capacity,), dtype='float32')
-        self.terminals = np.zeros((capacity,), dtype='int8')
+        img_shape = (capacity, channel, height, width)
 
-        self.size = 0
-        self.top = 0
+        self.images = to_np_array(image_data, img_shape, dtype='uint8')
+        self.actions = to_np_array(action_data, (capacity,), dtype='uint8')
+        self.rewards = to_np_array(reward_data, (capacity,), dtype='float32')
+        self.terminals = to_np_array(terminal_data, (capacity,), dtype='int8')
 
-    def add_experience(self, length, images: list, actions: list, rewards: list):
+        self.size_value = size_value
+        self.top_value = top_value
+        self.lock = buffer_lock
+
+    def add_experience(self, length, images: np.array, actions: list, rewards: list):
 
         assert length == len(images)
         assert length == len(actions)
         assert length == len(rewards)
         assert length < (self.capacity / 2.0)
 
-        self.size = min(self.capacity, self.size + length)
-        back_capacity = self.capacity - self.top
-
         terminals_0 = np.zeros(length, dtype='int8').reshape((length,))
         terminals_0[-1] = 1
         terminals = terminals_0.tolist()
 
-        if length <= back_capacity:
-            self.images[self.top: (self.top + length)] = images
-            self.actions[self.top: (self.top + length)] = actions
-            self.rewards[self.top: (self.top + length)] = rewards
-            self.terminals[self.top: (self.top + length)] = terminals
-            if length == back_capacity:
-                self.top = 0
+        with self.lock:
+
+            self.size_value.value = min(self.capacity, self.size_value.value + length)
+
+            top = self.top_value.value
+            back_capacity = self.capacity - top
+
+            if length <= back_capacity:
+                self.images[top: (top + length)] = images
+                self.actions[top: (top + length)] = actions
+                self.rewards[top: (top + length)] = rewards
+                self.terminals[top: (top + length)] = terminals
+                if length == back_capacity:
+                    self.top_value.value = 0
+                else:
+                    self.top_value.value = top + length
             else:
-                self.top = self.top + length
-        else:
-            self.images[self.top: self.capacity] = images[:back_capacity]
-            self.actions[self.top: self.capacity] = actions[:back_capacity]
-            self.rewards[self.top: self.capacity] = rewards[:back_capacity]
-            self.terminals[self.top: self.capacity] = terminals[:back_capacity]
-            rest = length - back_capacity
-            self.images[:rest] = images[back_capacity:]
-            self.actions[:rest] = actions[back_capacity:]
-            self.rewards[:rest] = rewards[back_capacity:]
-            self.terminals[:rest] = terminals[back_capacity:]
-            self.top = rest
+                self.images[top: self.capacity] = images[:back_capacity]
+                self.actions[top: self.capacity] = actions[:back_capacity]
+                self.rewards[top: self.capacity] = rewards[:back_capacity]
+                self.terminals[top: self.capacity] = terminals[:back_capacity]
+                rest = length - back_capacity
+                self.images[:rest] = images[back_capacity:]
+                self.actions[:rest] = actions[back_capacity:]
+                self.rewards[:rest] = rewards[back_capacity:]
+                self.terminals[:rest] = terminals[back_capacity:]
+                self.top_value.value = rest
 
     def random_batch(self, batch_size):
-
-        begin = 0
-
-        end = self.capacity
-        if self.size < self.capacity:
-            end = self.top
-        end = end - self.phi_length
-
-        indices = np.random.uniform(begin, end, (batch_size,)).astype('int32')
 
         images = np.zeros((batch_size,
                            self.phi_length + 1,
@@ -89,22 +121,26 @@ class ReplayBuffer(object):
                            self.width),
                           dtype='uint8')
 
+        with self.lock:
+            begin = 0
+            end = self.capacity
+            if self.size_value.value < self.capacity:
+                end = self.top_value.value
+            end = end - self.phi_length
 
-        for i in range(batch_size):
-            target_begin = indices[i]
-            target_end = target_begin + self.phi_length + 1
-            # get (phi_length + 1) images
-            images[i] = self.images[target_begin: target_end]
+            indices = self.rng.uniform(begin, end, (batch_size,)).astype('int32')
 
-        actions = np.take(self.actions, indices, axis=0)
-        rewards = np.take(self.rewards, indices, axis=0)
-        terminals = np.take(self.terminals, indices, axis=0)
+            for i in range(batch_size):
+                target_begin = indices[i]
+                target_end = target_begin + self.phi_length + 1
+                # get (phi_length + 1) images
+                images[i] = self.images[target_begin: target_end]
 
-        # actions = nd.take(self.actions, indices)
-        # rewards = nd.take(self.rewards, indices)
-        # terminals = nd.take(self.terminals, indices)
+            actions = np.take(self.actions, indices, axis=0)
+            rewards = np.take(self.rewards, indices, axis=0)
+            terminals = np.take(self.terminals, indices, axis=0)
 
-        return images, actions, rewards, terminals
+            return images, actions, rewards, terminals
 
 
 def test_add():
@@ -113,10 +149,13 @@ def test_add():
     channel = 2
     phi_length = 4
     discount = 0.99
-    capacity = 27
+    capacity = 32
     rng = np.random.RandomState(100)
 
-    buffer = ReplayBuffer(height, width, channel, phi_length, discount, rng, capacity)
+    mp_ctx = mp.get_context('spawn')
+    buffer_data = create_replay_buffer_data(height, width, channel, phi_length, capacity, mp_ctx)
+
+    buffer = ReplayBuffer(height, width, channel, phi_length, capacity, buffer_data)
 
     def get_experience(rows, begin=100):
         images = np.arange(begin, begin + (rows * channel * height * width)).reshape((rows, channel, height, width))
@@ -127,6 +166,7 @@ def test_add():
     buffer.add_experience(*get_experience(10))
     buffer.add_experience(*get_experience(10))
     buffer.add_experience(*get_experience(8))
+    buffer.add_experience(*get_experience(8))
 
     print('image:\n', buffer.images)
     print('actions:\n', buffer.actions)
@@ -134,8 +174,8 @@ def test_add():
     print('terminals:\n', buffer.terminals)
 
     print('capacity=', buffer.capacity)
-    print('size=', buffer.size)
-    print('top=', buffer.top)
+    print('size=', buffer.size_value.value)
+    print('top=', buffer.top_value.value)
 
 
 def test_get():
@@ -147,10 +187,10 @@ def test_get():
     capacity = 300
     rng = np.random.RandomState()
 
-    ctx = mx.cpu()
-    mx.random.seed(int(time.time() * 1000), ctx)
+    mp_ctx = mp.get_context('spawn')
+    buffer_data = create_replay_buffer_data(height, width, channel, phi_length, capacity, mp_ctx)
 
-    buffer = ReplayBuffer(height, width, channel, phi_length, discount, rng, capacity)
+    buffer = ReplayBuffer(height, width, channel, phi_length, capacity, buffer_data)
 
     def get_experience(rows, begin=0):
         images = np.arange(begin, begin + (rows * channel * height * width)).reshape((rows, channel, height, width))
@@ -168,8 +208,8 @@ def test_get():
     print('terminals:\n', buffer.terminals)
 
     print('capacity=', buffer.capacity)
-    print('size=', buffer.size)
-    print('top=', buffer.top)
+    print('size=', buffer.size_value.value)
+    print('top=', buffer.top_value.value)
 
     data = buffer.random_batch(4)
 

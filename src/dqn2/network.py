@@ -30,10 +30,7 @@ def get_net(
 
 
 def save_model_to_file(net, file_path):
-    t0 = time.time()
     net.save_parameters(file_path)
-    t1 = time.time()
-    print('%s Save model file[%s] time[%.3fs]' % (time.strftime("%Y-%m-%d %H:%M:%S"), file_path, (t1 - t0)))
     return file_path
 
 

@@ -27,7 +27,7 @@ class Player(object):
     def __init__(self,
                  play_id,
                  action_chooser,
-                 experience_out,
+                 coach_agent,
                  random_episode=10
                  ):
         self.rng = np.random.RandomState(RANDOM_SEED + (play_id * 1000))
@@ -40,7 +40,7 @@ class Player(object):
 
         self.action_chooser = action_chooser
 
-        self.experience_out = experience_out
+        self.coach_agent = coach_agent
 
         # self.episode_score_window = CirceBuffer(20)
         self.episode_steps_window = CirceBuffer(20)
@@ -92,16 +92,15 @@ class Player(object):
 
         t1 = time.time()
         # send experience to coach
+        experience = None
         if ep_step >= 0:  # FIXME just for test.
             # if step_count >= self.episode_steps_window.avg():
-            experience = (self.player_id, len(images), images, actions, rewards)
-            print('player[%d] send experience to coach. length=%d' % (self.player_id, len(images)))
+            experience = (len(images), images, actions, rewards)
 
-            self.experience_out.send(experience)
-            # self.experience_queue.put(experience)
+        ep_report = (ep_step, ep_score, ep_reward)
+        self.coach_agent.send((self.player_id, experience, ep_report))
 
         self.episode_steps_window.add(ep_step)
-
         self.episode_count += 1
 
         print('Player[%d] Episode[%d] done: time=%.3f step=%d score=%d reward=%.3f' %
@@ -124,6 +123,7 @@ class Player(object):
                 random_operation = False
             try:
                 self.run_episode(random_operation=random_operation)
+
                 count += 1
             except Exception as e:
                 print('player[%d] got exception:%s, %s' % (self.player_id, str(e), str(e.__cause__)))
