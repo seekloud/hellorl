@@ -7,7 +7,6 @@ import numpy as np
 
 from src.dqn2.config import *
 from src.dqn2.game_env import GameEnv
-from src.dqn2.replay_buffer import ReplayBuffer
 from src.ztutils import CirceBuffer
 
 
@@ -27,9 +26,8 @@ def start_player(play_id: int,
 class Player(object):
     def __init__(self,
                  play_id,
-                 judge_agent,
-                 replay_buffer_data,
-                 report_queue,
+                 action_chooser,
+                 coach_agent,
                  random_episode=10
                  ):
         self.rng = np.random.RandomState(RANDOM_SEED + (play_id * 1000))
@@ -39,20 +37,14 @@ class Player(object):
         self.action_num = ACTION_NUM
         self.player_id = play_id
         self.random_episode = random_episode
-        self.report_queue = report_queue
 
-        self.judge_agent = judge_agent
+        self.action_chooser = action_chooser
 
-        self.replay_buffer = ReplayBuffer(HEIGHT,
-                                          WIDTH,
-                                          CHANNEL,
-                                          PHI_LENGTH, BUFFER_MAX,
-                                          replay_buffer_data)
+        self.coach_agent = coach_agent
 
         # self.episode_score_window = CirceBuffer(20)
         self.episode_steps_window = CirceBuffer(20)
         self.episode_count = 0
-        self.total_step = 0
         self.rng = RANDOM
         self.epsilon = EPSILON_START
 
@@ -99,19 +91,17 @@ class Player(object):
             ep_step += 1
 
         t1 = time.time()
-
-        self.episode_steps_window.add(ep_step)
-        self.episode_count += 1
-
-        # record experience
+        # send experience to coach
+        experience = None
         if ep_step >= 0:  # FIXME just for test.
             # if step_count >= self.episode_steps_window.avg():
             experience = (len(images), images, actions, rewards)
-            self._record_experience(experience)
 
         ep_report = (ep_step, ep_score, ep_reward)
+        self.coach_agent.send((self.player_id, experience, ep_report))
 
-        self.report_queue.put((self.player_id, ep_report))
+        self.episode_steps_window.add(ep_step)
+        self.episode_count += 1
 
         print('Player[%d] Episode[%d] done: time=%.3f step=%d score=%d reward=%.3f' %
               (self.player_id,
@@ -141,7 +131,6 @@ class Player(object):
         print('[ WARNING ] ---- !!!!!!!!!! Player[%d] stop.' % self.player_id)
 
     def _choose_action(self, phi):
-        self.total_step += 1
 
         self.epsilon = max(EPSILON_MIN, self.epsilon - EPSILON_RATE)
 
@@ -149,10 +138,6 @@ class Player(object):
             action = self.rng.randint(0, self.action_num)
             q_val = 0.0
         else:
-            # TODO
-            # set shared observation mem.
-            self.judge_agent.send(self.total_step)
-
             # print('player [%d] send phi' % self.player_id)
             self.action_chooser.send(phi)
             # print('player [%d] waiting action...' % self.player_id)
@@ -162,9 +147,6 @@ class Player(object):
             # print('player [%d] got action [%d]' % (self.player_id, action))
 
         return action, q_val
-
-    def _record_experience(self, experience):
-        pass
 
     def _random_action(self):
         action = self.rng.randint(0, self.action_num)
