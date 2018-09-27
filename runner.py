@@ -5,9 +5,9 @@
 
 
 # import src.dqn.experiment as runner
-import src.dqn2.bkp.experiment as dqn2
+from src.dqn2.coach import start_coach
 if __name__ == '__main__':
     # runner.train()
     # runner.test(render=True)
-    dqn2.train()
+    start_coach()
     # print('os.name:', os.name)

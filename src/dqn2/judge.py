@@ -39,7 +39,7 @@ def listen_player(player_id,
     image_shape = (CHANNEL, HEIGHT, WIDTH)
     shared_screen = SharedScreen(image_shape, PHI_LENGTH, shared_screen_data)
     while True:
-        #FIXME num should be ignore?
+        # FIXME num should be ignore?
         num = player_agent.recv()
         observation = shared_screen.get_phi()
         merge_queue.put((player_id, observation))
@@ -69,7 +69,10 @@ class Judge(object):
         self.ctx = utils.try_gpu(GPU_INDEX)
 
         self.play_net = get_net(ACTION_NUM, self.ctx)
-        self.play_net.load_parameters(model_file)
+
+        if model_file is not None:
+            print('%s: Judge read trained model from [%s]' % (time.strftime("%Y-%m-%d %H:%M:%S"), model_file))
+            self.play_net.load_parameters(model_file, ctx=self.ctx)
 
         self.play_net_version = -1
         self.shared_play_net_version = shared_play_net_version

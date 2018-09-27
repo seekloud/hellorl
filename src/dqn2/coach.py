@@ -4,33 +4,26 @@
 # FileName: coach.py
 
 
-import queue
-import threading
-
-import src.utils as utils
-from src.dqn2.network import *
-from src.dqn2.q_learning import QLearning
-from src.dqn2.replay_buffer import ReplayBuffer
-import os
-from src.ztutils import CirceBuffer
-from src.dqn2.replay_buffer import create_replay_buffer_data
 import multiprocessing as mp
-from src.dqn2.judge import start_judge, SharedScreen
-from src.dqn2.player import start_player
-
 import signal
 
+import src.utils as utils
+from src.dqn2.config import *
+from src.dqn2.judge import start_judge, SharedScreen
+from src.dqn2.network import save_model_to_file
+from src.dqn2.player import start_player
+from src.dqn2.q_learning import QLearning
+from src.dqn2.replay_buffer import ReplayBuffer
+from src.dqn2.replay_buffer import create_replay_buffer_data
+from src.ztutils import CirceBuffer
 
-def start_coach(pre_trained_model_file,
-                episode_in_list,
-                play_net_file,
-                play_net_version
-                ):
+
+def start_coach():
     # create coach, and start it.
     pid = os.getpid()
     ppid = os.getppid()
     print('++++++++++++++++++ Coach starting.... pid=[%s] ppid=[%s]' % (str(pid), str(ppid)))
-    coach = Coach(pre_trained_model_file, episode_in_list, play_net_file, play_net_version)
+    coach = Coach()
     coach.start()
     print('Coach finish.')
 
@@ -48,15 +41,22 @@ def term(sig_num, addtion):
 
 class Coach(object):
 
-    def __init__(self,
-                 model_file: str,
-                 experience_in_list: list,
-                 shared_play_net_file,
-                 shared_play_net_version):
+    def __init__(self):
+
+        signal.signal(signal.SIGTERM, term)
 
         self.ctx = utils.try_gpu(GPU_INDEX)
 
-        self.mp_ctx = mp.get_start_method('forkserver')
+        if os.name == 'nt':
+            mp_method = 'spawn'
+        elif os.name == 'posix':
+            mp_method = 'forkserver'
+        else:
+            mp_method = 'forkserver'
+
+        print('multiprocessing context method: ', mp_method)
+
+        self.mp_ctx = mp.get_start_method(mp_method)
 
         self.report_queue = self.mp_ctx.Queue()
         self.process_list = []
@@ -74,18 +74,18 @@ class Coach(object):
         self.player_agent_map, self.player_screen_map = \
             self._init_player(PLAYER_NUM, replay_buffer_data)
 
-        self._init_judge(model_file)
+        self._init_judge(PRE_TRAIN_MODEL_FILE)
 
         self.last_data_time = time.time() + 100.0
 
-        self.shared_play_net_version = shared_play_net_version
+        self.shared_play_net_version = self.mp_ctx.Value('i', -1)
 
-        self.shared_play_net_file = shared_play_net_file
+        self.shared_play_net_file = PLAY_NET_MODEL_FILE
         self.episode_count = 0
         self.step_count = 0
         self.train_count = 0
 
-        self.q_learning = QLearning(self.ctx, model_file)
+        self.q_learning = QLearning(self.ctx, PRE_TRAIN_MODEL_FILE)
 
         self.stat_range = 100
         self.step_circe = CirceBuffer(self.stat_range)
@@ -173,13 +173,21 @@ class Coach(object):
                 print('Coach no data timeout: %.3f' % (time.time() - self.last_data_time))
                 break
 
-        print('[ WARNING ] ----------------------- !!!!!!!!!! Coach stop')
-        # TODO do some cleaning...
+        print('[ WARNING ] ----------------------- Coach stop')
+        for p in self.process_list:
+            p.terminate()
+        print('----------------')
 
     def _read_report(self):
-        # TODO
+        if not self.report_queue.empty():
+            report = self.report_queue.get()
+            (ep_step, ep_score, ep_reward) = report
+            self.step_circe.add(ep_step)
+            self.score_circe.add(ep_score)
+            self.reward_circe.add(ep_reward)
 
-        pass
+            self.step_count += ep_step
+            self.episode_count += 1
 
     def _train(self):
         if self.step_count > 100:

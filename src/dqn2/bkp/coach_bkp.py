@@ -13,6 +13,8 @@ from src.dqn2.q_learning import QLearning
 from src.dqn2.replay_buffer import ReplayBuffer
 import os
 from src.ztutils import CirceBuffer
+import time
+from src.dqn2.config import *
 
 
 def start_coach(pre_trained_model_file,

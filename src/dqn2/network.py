@@ -7,12 +7,12 @@
 import mxnet as mx
 from mxnet import init, nd
 from mxnet.gluon import nn
-from src.dqn2.config import *
+
+from src.dqn2.config import PHI_LENGTH, CHANNEL, HEIGHT, WIDTH
 
 
-def get_net(
-        action_num: int,
-        ctx: mx.Context):
+def get_net(action_num: int,
+            ctx: mx.Context):
     net = nn.Sequential()
     with net.name_scope():
         net.add(
