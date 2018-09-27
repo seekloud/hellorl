@@ -7,6 +7,7 @@ import numpy as np
 
 from src.dqn2.config import *
 from src.dqn2.game_env import GameEnv
+from src.dqn2.judge import SharedScreen
 from src.dqn2.replay_buffer import ReplayBuffer
 from src.ztutils import CirceBuffer
 
@@ -30,6 +31,7 @@ class Player(object):
                  judge_agent,
                  replay_buffer_data,
                  report_queue,
+                 shared_screen_data,
                  random_episode=10
                  ):
         self.rng = np.random.RandomState(RANDOM_SEED + (play_id * 1000))
@@ -48,6 +50,9 @@ class Player(object):
                                           CHANNEL,
                                           PHI_LENGTH, BUFFER_MAX,
                                           replay_buffer_data)
+        image_shape = (CHANNEL, HEIGHT, WIDTH)
+        self.shared_screen = SharedScreen(image_shape, PHI_LENGTH, shared_screen_data)
+        self.experience_recoder = ExperienceRecorder()
 
         # self.episode_score_window = CirceBuffer(20)
         self.episode_steps_window = CirceBuffer(20)
@@ -61,38 +66,29 @@ class Player(object):
         ep_score = 0
         ep_step = 0
 
-        images = []
-        actions = []
-        rewards = []
-
         observation = self.game.reset()
 
         # do no operation steps.
         max_no_op_steps = 5
         for _ in range(self.rng.randint(PHI_LENGTH, PHI_LENGTH + max_no_op_steps + 1)):
-            obs = self.process_img(observation)
-            images.append(obs)
+            image = self.process_img(observation)
             observation, reward, episode_done, lives, score = self.game.step(0)
-            actions.append(0)
-            rewards.append(reward)
+            self.experience_recoder.add_step(image, 0, reward)
 
         episode_done = False
         t0 = time.time()
         while not episode_done:
-            phi = images[-PHI_LENGTH:]
 
-            action, q_val = 0, 0.0
+            image = self.process_img(observation)
 
             if random_operation:
                 action, q_val = self._random_action()
             else:
-                action, q_val = self._choose_action(phi)
+                action, q_val = self._choose_action(image)
 
-            obs = self.process_img(observation)
-            images.append(obs)
             observation, reward, episode_done, lives, score = self.game.step(action)
-            actions.append(action)
-            rewards.append(reward)
+            self.experience_recoder.add_step(image, action, reward)
+
             # print('player step[%d] %d %f' % (step_count, action, reward))
             ep_reward += reward
             ep_score += score
@@ -103,15 +99,16 @@ class Player(object):
         self.episode_steps_window.add(ep_step)
         self.episode_count += 1
 
+        ep_report = (ep_step, ep_score, ep_reward)
+        self.report_queue.put((self.player_id, ep_report))
+
         # record experience
         if ep_step >= 0:  # FIXME just for test.
             # if step_count >= self.episode_steps_window.avg():
-            experience = (len(images), images, actions, rewards)
-            self._record_experience(experience)
-
-        ep_report = (ep_step, ep_score, ep_reward)
-
-        self.report_queue.put((self.player_id, ep_report))
+            experience = self.experience_recoder.pop_experience()
+            self.replay_buffer.add_experience(*experience)
+        else:
+            self.experience_recoder.clean()
 
         print('Player[%d] Episode[%d] done: time=%.3f step=%d score=%d reward=%.3f' %
               (self.player_id,
@@ -133,38 +130,28 @@ class Player(object):
                 random_operation = False
             try:
                 self.run_episode(random_operation=random_operation)
-
                 count += 1
             except Exception as e:
                 print('player[%d] got exception:%s, %s' % (self.player_id, str(e), str(e.__cause__)))
                 break
         print('[ WARNING ] ---- !!!!!!!!!! Player[%d] stop.' % self.player_id)
 
-    def _choose_action(self, phi):
+    def _choose_action(self, image):
         self.total_step += 1
-
         self.epsilon = max(EPSILON_MIN, self.epsilon - EPSILON_RATE)
-
         if self.rng.rand() < self.epsilon:
             action = self.rng.randint(0, self.action_num)
             q_val = 0.0
         else:
-            # TODO
-            # set shared observation mem.
+            # set shared screen mem.
+            self.shared_screen.add_image(image)
+            # print('player [%d] set image' % self.player_id)
             self.judge_agent.send(self.total_step)
-
-            # print('player [%d] send phi' % self.player_id)
-            self.action_chooser.send(phi)
             # print('player [%d] waiting action...' % self.player_id)
-            msg = self.action_chooser.recv()
-            # print('msg:', msg)
+            msg = self.judge_agent.recv()
             action, q_val = msg
             # print('player [%d] got action [%d]' % (self.player_id, action))
-
         return action, q_val
-
-    def _record_experience(self, experience):
-        pass
 
     def _random_action(self):
         action = self.rng.randint(0, self.action_num)
@@ -173,7 +160,36 @@ class Player(object):
     @staticmethod
     def process_img(img):
         img = img.transpose(2, 0, 1)
-        return img.tolist()
+        return img
+
+
+class ExperienceRecorder(object):
+    def __init__(self):
+        self.images = None
+        self.actions = []
+        self.rewards = []
+        pass
+
+    def add_step(self, image: np.array, action, reward):
+        if self.images is None:
+            self.images = image.reshape(1, *image.shape)
+        else:
+            self.images = np.row_stack((self.images, image))
+        self.actions.append(action)
+        self.rewards.append(reward)
+
+    def pop_experience(self):
+        length = len(self.actions)
+        experience = length, self.images, self.actions, self.rewards
+        self.images = None
+        self.actions = []
+        self.rewards = []
+        return experience
+
+    def clean(self):
+        self.images = None
+        self.actions = []
+        self.rewards = []
 
 
 def test_circe_buffer():

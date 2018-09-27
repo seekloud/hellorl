@@ -41,8 +41,6 @@ def cacl_size(shape: tuple, dtype: str):
         length *= x
 
     size = bytes_len * length
-    assert size % 8 == 0, '(bytes_len * length) % 8 != 0'
-    size = size // 8
     return size
 
 
@@ -56,6 +54,29 @@ def reader1(shared_arr, shape, dtype, d):
     np_arr[0, 0, 0] += 1.0
     print('in reader, size:', size)
     print('in reader, x=', np_arr[0, 0, 0])
+
+
+def test5():
+    shape = (2, 5)
+    dtype = 'uint8'
+
+    start_method = 'spawn'
+
+    size = cacl_size(shape, dtype)
+    mp_ctx = mp.get_context(start_method)
+
+    shared_arr = mp_ctx.Array(ctypes.c_byte, size)
+    np_arr: np.ndarray = tonumpyarray(shared_arr, shape, dtype)
+    np_arr[0, 0] = 999
+
+    print('-')
+    print(type(shared_arr.get_obj()))
+    print(shared_arr.get_obj())
+
+    print(np_arr)
+
+    np_arr2: np.ndarray = tonumpyarray(shared_arr, shape, dtype)
+    print(np_arr2)
 
 
 def test4():
@@ -76,8 +97,6 @@ def test4():
     print(np_arr)
 
 
-
-
 def test3():
     shape = (300, 400, 5000)
     dtype = 'float32'
@@ -96,7 +115,6 @@ def test3():
         ps.append(p)
         p.start()
 
-
     for i in range(10):
         print('in main waiting...')
         time.sleep(1.0)
@@ -104,8 +122,6 @@ def test3():
         np_arr[0, 0, 0] = 99.99999
         print('in main, size:', size)
         print('in main, x=', np_arr[0, 0, 0])
-
-
 
     for p in ps:
         p.join()
@@ -146,5 +162,5 @@ def tonumpyarray(mp_arr, shape: tuple, dtype=np.float32):
 
 if __name__ == '__main__':
     # mp.freeze_support()
-    test4()
+    test5()
     pass

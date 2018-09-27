@@ -12,12 +12,13 @@ import src.utils as utils
 from src.dqn2.shared_utils import to_np_array
 from mxnet import nd
 import signal
+import numpy as np
 
 
 def start_judge(model_file,
                 player_id_list,
                 player_agent_list,
-                player_observation_mem_list,
+                shared_screen_data_list,
                 coach_play_net_version
                 ):
     pid = os.getpid()
@@ -26,7 +27,7 @@ def start_judge(model_file,
     judge = Judge(model_file,
                   player_id_list,
                   player_agent_list,
-                  player_observation_mem_list,
+                  shared_screen_data_list,
                   coach_play_net_version
                   )
     judge.start()
@@ -34,14 +35,14 @@ def start_judge(model_file,
 
 def listen_player(player_id,
                   player_agent,
-                  player_observation_mem,
+                  shared_screen_data,
                   merge_queue: queue.Queue):
     print('Experiment listen_player by: ', threading.current_thread().name)
-    shape = (CHANNEL, HEIGHT, WIDTH)
-    shared_observation = to_np_array(player_observation_mem, shape, 'uint8')
+    image_shape = (CHANNEL, HEIGHT, WIDTH)
+    shared_screen = SharedScreen(image_shape, PHI_LENGTH, shared_screen_data)
     while True:
         num = player_agent.recv()
-        observation = shared_observation.copy()
+        observation = shared_screen.get_phi()
         merge_queue.put((player_id, observation))
 
 
@@ -62,7 +63,7 @@ class Judge(object):
                  model_file,
                  player_id_list,
                  player_agent_list,
-                 player_observation_mem_list,
+                 shared_screen_data_list,
                  coach_play_net_version):
 
         signal.signal(signal.SIGTERM, term)
@@ -79,20 +80,19 @@ class Judge(object):
         # listen to players.
         for player_id, \
             player_agent, \
-            player_observation_mem in zip(player_id_list,
-                                          player_agent_list,
-                                          player_observation_mem_list
-                                          ):
+            shared_screen_data in zip(player_id_list,
+                                      player_agent_list,
+                                      shared_screen_data_list
+                                      ):
             self.player_agents[player_id] = player_agent
             t = threading.Thread(target=listen_player,
                                  args=(player_id,
                                        player_agent,
-                                       player_observation_mem,
+                                       shared_screen_data,
                                        self.local_observation_queue),
                                  name='player_listener_' + str(player_id),
                                  daemon=False)
             t.start()
-
 
     def start(self):
 
@@ -159,3 +159,29 @@ class Judge(object):
             #     t1 - t0))
             self.play_net_version = latest_version
         return
+
+
+class SharedScreen(object):
+    def __init__(self, image_shape, phi_length, shared_data):
+        shape = (phi_length, *image_shape)
+        self.buffer = to_np_array(shared_data, shape, 'uint8')
+        self._index = 0
+        self._count = 0
+        self.phi_length = phi_length
+        pass
+
+    def get_phi(self):
+        assert self._count >= self.phi_length
+        i = self._index
+        if i == 0:
+            phi = self.buffer
+        else:
+            p1 = self.buffer[:i]
+            p2 = self.buffer[i:]
+            phi = np.vstack((p2, p1))
+        return phi
+
+    def add_image(self, image: np.ndarray):
+        self.buffer[self._index] = image
+        self._index = (self._index + 1) % self.phi_length
+        self._count += 1

@@ -15,22 +15,12 @@ import multiprocessing as mp
 from src.dqn2.shared_utils import create_shared_data, to_np_array
 
 
-def fix_capacity(capacity):
-    mod = capacity % 8
-    if mod == 0:
-        rst = capacity
-    else:
-        rst = capacity + (8 - mod)
-    return rst
-
-
 def create_replay_buffer_data(height: int,
                               width: int,
                               channel: int,
                               phi_length: int,
                               capacity: int,
                               mp_ctx):
-    capacity = fix_capacity(capacity)
     img_shape = (capacity, channel, height, width)
     image_data = create_shared_data(mp_ctx, img_shape, 'uint8')
     action_data = create_shared_data(mp_ctx, (capacity,), dtype='uint8')
@@ -51,7 +41,6 @@ class ReplayBuffer(object):
                  phi_length: int,
                  capacity: int,
                  data: tuple):
-        capacity = fix_capacity(capacity)
 
         image_data, action_data, reward_data, terminal_data, top_value, size_value, buffer_lock = data
 
