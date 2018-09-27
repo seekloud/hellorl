@@ -18,7 +18,6 @@ from src.dqn2.shared_utils import create_shared_data, to_np_array
 def create_replay_buffer_data(height: int,
                               width: int,
                               channel: int,
-                              phi_length: int,
                               capacity: int,
                               mp_ctx):
     img_shape = (capacity, channel, height, width)

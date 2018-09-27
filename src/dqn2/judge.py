@@ -9,26 +9,24 @@ import threading
 from src.dqn2.network import get_net
 from src.dqn2.config import *
 import src.utils as utils
-from src.dqn2.shared_utils import to_np_array
+from src.dqn2.shared_utils import to_np_array, create_shared_data
 from mxnet import nd
 import signal
 import numpy as np
 
 
 def start_judge(model_file,
-                player_id_list,
-                player_agent_list,
-                shared_screen_data_list,
-                coach_play_net_version
+                player_agent_map,
+                player_screen_map,
+                shared_play_net_version
                 ):
     pid = os.getpid()
     ppid = os.getppid()
     print('++++++++++++   Judge starting... pid=[%s] ppid=[%s] ' % (str(pid), str(ppid)))
     judge = Judge(model_file,
-                  player_id_list,
-                  player_agent_list,
-                  shared_screen_data_list,
-                  coach_play_net_version
+                  player_agent_map,
+                  player_screen_map,
+                  shared_play_net_version
                   )
     judge.start()
 
@@ -41,6 +39,7 @@ def listen_player(player_id,
     image_shape = (CHANNEL, HEIGHT, WIDTH)
     shared_screen = SharedScreen(image_shape, PHI_LENGTH, shared_screen_data)
     while True:
+        #FIXME num should be ignore?
         num = player_agent.recv()
         observation = shared_screen.get_phi()
         merge_queue.put((player_id, observation))
@@ -61,29 +60,27 @@ class Judge(object):
 
     def __init__(self,
                  model_file,
-                 player_id_list,
-                 player_agent_list,
-                 shared_screen_data_list,
-                 coach_play_net_version):
+                 player_agents: dict,
+                 shared_screen_data_map: dict,
+                 shared_play_net_version):
 
         signal.signal(signal.SIGTERM, term)
 
         self.ctx = utils.try_gpu(GPU_INDEX)
+
         self.play_net = get_net(ACTION_NUM, self.ctx)
+        self.play_net.load_parameters(model_file)
+
         self.play_net_version = -1
-        self.coach_play_net_version = coach_play_net_version
+        self.shared_play_net_version = shared_play_net_version
         self.play_net_file = PLAY_NET_MODEL_FILE
         self.local_observation_queue = queue.Queue()
-        self.player_agents = dict()
+        self.player_agents = player_agents
         self.step_count = 0
 
         # listen to players.
-        for player_id, \
-            player_agent, \
-            shared_screen_data in zip(player_id_list,
-                                      player_agent_list,
-                                      shared_screen_data_list
-                                      ):
+        for player_id, player_agent in player_agents:
+            shared_screen_data = shared_screen_data_map[player_id]
             self.player_agents[player_id] = player_agent
             t = threading.Thread(target=listen_player,
                                  args=(player_id,
@@ -147,7 +144,7 @@ class Judge(object):
         return actions.asnumpy().tolist(), max_q_list
 
     def update_play_net(self):
-        latest_version = self.coach_play_net_version.value
+        latest_version = self.shared_play_net_version.value
         if latest_version > self.play_net_version:
             # t0 = time.time()
             self.play_net.load_parameters(self.play_net_file, ctx=self.ctx)
@@ -185,3 +182,9 @@ class SharedScreen(object):
         self.buffer[self._index] = image
         self._index = (self._index + 1) % self.phi_length
         self._count += 1
+
+    @staticmethod
+    def create_shared_data(image_shape, phi_length, mp_ctx):
+        shape = (phi_length, *image_shape)
+        data = create_shared_data(mp_ctx, shape, 'uint8')
+        return data

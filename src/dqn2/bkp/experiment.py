@@ -11,11 +11,11 @@ import numpy as np
 from mxnet import nd
 
 import src.utils as utils
-from src.dqn2.coach import start_coach
+from src.dqn2.bkp.coach_bkp import start_coach
 from src.dqn2.config import *
 from src.dqn2.config import _print_conf
 from src.dqn2.network import get_net
-from src.dqn2.player import start_player
+from src.dqn2.bkp.player_bkp import start_player
 
 import threading
 import signal

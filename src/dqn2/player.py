@@ -13,15 +13,22 @@ from src.ztutils import CirceBuffer
 
 
 def start_player(play_id: int,
-                 action_chooser,
-                 experience_out,
+                 judge_agent,
+                 replay_buffer_data,
+                 report_queue,
+                 shared_screen_data,
                  random_episode: int
                  ):
     # create player and start it.
     pid = os.getpid()
     ppid = os.getppid()
     print('++++++++++++   Player[%d] starting. pid=[%s] ppid=[%s] ' % (play_id, str(pid), str(ppid)))
-    player = Player(play_id, action_chooser, experience_out, random_episode)
+    player = Player(play_id,
+                    judge_agent,
+                    replay_buffer_data,
+                    report_queue,
+                    shared_screen_data,
+                    random_episode)
     player.start()
 
 

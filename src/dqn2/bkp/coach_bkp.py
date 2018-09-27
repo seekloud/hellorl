@@ -13,12 +13,6 @@ from src.dqn2.q_learning import QLearning
 from src.dqn2.replay_buffer import ReplayBuffer
 import os
 from src.ztutils import CirceBuffer
-from src.dqn2.replay_buffer import create_replay_buffer_data
-import multiprocessing as mp
-from src.dqn2.judge import start_judge, SharedScreen
-from src.dqn2.player import start_player
-
-import signal
 
 
 def start_coach(pre_trained_model_file,
@@ -35,15 +29,12 @@ def start_coach(pre_trained_model_file,
     print('Coach finish.')
 
 
-_killed = False
-
-
-def term(sig_num, addtion):
-    print('sig_num', sig_num)
-    print('addtion', addtion)
-    global _killed
-    _killed = True
-    print('Main process [Coach] stopping...')
+def listen_experience(episode_in,
+                      merge_queue: queue.Queue):
+    print('Coach listen_experience by: ', threading.current_thread().name)
+    while True:
+        episode_info = episode_in.recv()
+        merge_queue.put(episode_info)
 
 
 class Coach(object):
@@ -53,37 +44,18 @@ class Coach(object):
                  experience_in_list: list,
                  shared_play_net_file,
                  shared_play_net_version):
-
         self.ctx = utils.try_gpu(GPU_INDEX)
-
-        self.mp_ctx = mp.get_start_method('forkserver')
-
-        self.report_queue = self.mp_ctx.Queue()
-        self.process_list = []
-
-        replay_buffer_data = \
-            create_replay_buffer_data(HEIGHT, WIDTH, CHANNEL, BUFFER_MAX, self.mp_ctx)
-
-        self.replay_buffer = ReplayBuffer(HEIGHT,
-                                          WIDTH,
-                                          CHANNEL,
-                                          PHI_LENGTH,
-                                          BUFFER_MAX,
-                                          replay_buffer_data)
-
-        self.player_agent_map, self.player_screen_map = \
-            self._init_player(PLAYER_NUM, replay_buffer_data)
-
-        self._init_judge(model_file)
+        self.replay_buffer = ReplayBuffer(HEIGHT, WIDTH, CHANNEL, PHI_LENGTH, DISCOUNT, RANDOM, BUFFER_MAX)
 
         self.last_data_time = time.time() + 100.0
 
+        self.experience_in_list = experience_in_list
         self.shared_play_net_version = shared_play_net_version
-
         self.shared_play_net_file = shared_play_net_file
         self.episode_count = 0
         self.step_count = 0
         self.train_count = 0
+        self.local_episode_queue = queue.Queue(200)
 
         self.q_learning = QLearning(self.ctx, model_file)
 
@@ -92,56 +64,22 @@ class Coach(object):
         self.score_circe = CirceBuffer(self.stat_range)
         self.reward_circe = CirceBuffer(self.stat_range)
 
-    """ 
-    .
-    .
-    .
-    .
-    .
-    """
-
-    def _init_player(self, num, replay_buffer_data):
-        player_id_list = [i for i in range(num)]
-
-        player_agent_map = dict()
-        player_screen_map = dict()
-
-        for player_id in player_id_list:
-            image_share = ()
-            shared_screen_data = \
-                SharedScreen.create_shared_data(image_share, PHI_LENGTH, self.mp_ctx)
-            player_agent, judge_agent = self.mp_ctx.Pipe()
-
-            p = self.mp_ctx.Process(target=start_player,
-                                    args=(player_id,
-                                          judge_agent,
-                                          replay_buffer_data,
-                                          self.report_queue,
-                                          shared_screen_data,
-                                          RANDOM_EPISODE_PER_PLAYER))
-            p.start()
-            self.process_list.append(p)
-            player_agent_map[player_id] = player_agent
-            player_screen_map[player_id] = shared_screen_data
-
-        return player_agent_map, player_screen_map
-
-    def _init_judge(self, model_file):
-
-        p = self.mp_ctx.Process(target=start_judge,
-                                args=(model_file,
-                                      self.player_agent_map,
-                                      self.player_screen_map,
-                                      self.shared_play_net_version))
-        p.start()
-        self.process_list.append(p)
+        # start listener.
+        count = 0
+        for exp_in in self.experience_in_list:
+            t = threading.Thread(target=listen_experience,
+                                 args=(exp_in, self.local_episode_queue),
+                                 name='queue_loader_' + str(count),
+                                 daemon=False)
+            t.start()
+            count += 1
 
     def start(self):
         last_report = 0
 
-        while not _killed:
+        while True:
             t0 = time.time()
-            self._read_report()
+            self._read_experience()
             t1 = time.time()
             self._train()
             t2 = time.time()
@@ -172,14 +110,63 @@ class Coach(object):
             if time.time() - self.last_data_time > 100.0:
                 print('Coach no data timeout: %.3f' % (time.time() - self.last_data_time))
                 break
-
         print('[ WARNING ] ----------------------- !!!!!!!!!! Coach stop')
-        # TODO do some cleaning...
 
-    def _read_report(self):
-        # TODO
+    def _read_experience(self):
+        qu = self.local_episode_queue
+        timeout = 1.0
+        episode_info = None
+        t0 = time.time()
+        t1 = 0.0
+        t2 = 0.0
+        t3 = 0.0
+        t4 = 0.0
+        t5 = 0.0
+        t6 = 0.0
+        t7 = 0.0
+        t8 = 0.0
+        if not qu.empty():
+            try:
+                t1 = time.time()
+                episode_info = qu.get(timeout=timeout)
+                t2 = time.time()
+            except TimeoutError:
+                episode_info = None
+                print('[ WARNING ] read experience queue timeout.')
 
-        pass
+        if episode_info is not None:
+            t3 = time.time()
+            self.last_data_time = time.time()
+            (player_id, experience, report) = episode_info
+            t4 = time.time()
+            if experience is not None:
+                (length, images, actions, rewards) = experience
+                t5 = time.time()
+                self.replay_buffer.add_experience(length, images, actions, rewards)
+
+            t6 = time.time()
+            (ep_step, ep_score, ep_reward) = report
+            t7 = time.time()
+
+            self.step_circe.add(ep_step)
+            self.score_circe.add(ep_score)
+            self.reward_circe.add(ep_reward)
+
+            self.step_count += ep_step
+            self.episode_count += 1
+            t8 = time.time()
+
+            print('--------  ' +
+                  'Time analysis: t1=%.4f t2=%.4f t3=%.4f t4=%.4f t5=%.4f t6=%.4f t7=%.4f t8=%.4f \n' % (
+                      t1 - t0,
+                      t2 - t1,
+                      t3 - t2,
+                      t4 - t3,
+                      t5 - t4,
+                      t6 - t5,
+                      t7 - t6,
+                      t8 - t7
+                  ))
 
     def _train(self):
         if self.step_count > 100:
