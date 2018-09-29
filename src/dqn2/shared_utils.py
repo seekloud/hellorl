@@ -14,7 +14,7 @@ def to_np_array(mp_arr, shape: tuple, dtype=np.float32):
 
 def create_shared_data(mp_ctx, shape: tuple, dtype: str):
     size = _cacl_size(shape, dtype)
-    shared_arr = mp_ctx.Array(ctypes.c_double, size)
+    shared_arr = mp_ctx.Array(ctypes.c_byte, size)
     return shared_arr
 
 
@@ -38,6 +38,4 @@ def _cacl_size(shape: tuple, dtype: str):
         length *= x
 
     size = bytes_len * length
-    assert size % 8 == 0, '(bytes_len * length) % 8 != 0'
-    size = size // 8
     return size

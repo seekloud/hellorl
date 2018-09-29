@@ -42,7 +42,7 @@ class QLearning(object):
 
     def _update_target_net(self):
         self.update_count += 1
-        print('Coach update_target_net[%d] at train[%d]' % (self.update_count, self.train_count))
+        print('QLearning update_target_net[%d] at train[%d]' % (self.update_count, self.train_count))
         copy_parameters(self.policy_net, self.target_net)
 
     def train_policy_net(self,

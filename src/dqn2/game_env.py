@@ -3,8 +3,8 @@
 # Time  : 12:23 PM
 # FileName: environment.py
 
-import gym
 from gym.envs.atari import AtariEnv
+
 from src.dqn2.config import NEGATIVE_REWARD, POSITIVE_REWARD
 
 

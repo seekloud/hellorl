@@ -4,18 +4,19 @@
 # FileName: coach.py
 
 
-import multiprocessing as mp
+import multiprocessing
 import signal
 
 import src.utils as utils
 from src.dqn2.config import *
+from src.dqn2.config import _print_conf
 from src.dqn2.judge import start_judge, SharedScreen
 from src.dqn2.network import save_model_to_file
-from src.dqn2.player import start_player
+from src.dqn2.player import *
 from src.dqn2.q_learning import QLearning
-from src.dqn2.replay_buffer import ReplayBuffer
-from src.dqn2.replay_buffer import create_replay_buffer_data
+from src.dqn2.replay_buffer import ReplayBuffer, create_replay_buffer_data
 from src.ztutils import CirceBuffer
+import time
 
 
 def start_coach():
@@ -24,7 +25,12 @@ def start_coach():
     ppid = os.getppid()
     print('++++++++++++++++++ Coach starting.... pid=[%s] ppid=[%s]' % (str(pid), str(ppid)))
     coach = Coach()
-    coach.start()
+    # coach.start()
+    print('waiting...')
+    time.sleep(50)
+    print('lalala')
+    time.sleep(50)
+
     print('Coach finish.')
 
 
@@ -43,9 +49,15 @@ class Coach(object):
 
     def __init__(self):
 
+        print('0 - ' * 20)
+
+        _print_conf()
+
         signal.signal(signal.SIGTERM, term)
+        print('0.1 - ' * 20)
 
         self.ctx = utils.try_gpu(GPU_INDEX)
+        print('0.2 - ' * 20)
 
         if os.name == 'nt':
             mp_method = 'spawn'
@@ -56,30 +68,43 @@ class Coach(object):
 
         print('multiprocessing context method: ', mp_method)
 
-        self.mp_ctx = mp.get_start_method(mp_method)
+        print('1 - ' * 20)
+
+        self.mp_ctx = multiprocessing.get_context(mp_method)
+        print('2 - ' * 20)
 
         self.report_queue = self.mp_ctx.Queue()
         self.process_list = []
+        self.shared_data_storage = []
 
-        replay_buffer_data = \
+        print('3 - ' * 20)
+        self.shared_play_net_version = self.mp_ctx.Value('i', -1)
+        print('shared_play_net_version: ', type(self.shared_play_net_version))
+
+        self.replay_buffer_data = \
             create_replay_buffer_data(HEIGHT, WIDTH, CHANNEL, BUFFER_MAX, self.mp_ctx)
 
+        # print('!!!!!!!!!!  type replay_buffer_data:', type(replay_buffer_data))
+
+        print('4 - ' * 20)
         self.replay_buffer = ReplayBuffer(HEIGHT,
                                           WIDTH,
                                           CHANNEL,
                                           PHI_LENGTH,
                                           BUFFER_MAX,
-                                          replay_buffer_data)
+                                          self.replay_buffer_data)
 
+        print('5 - ' * 20)
         self.player_agent_map, self.player_screen_map = \
-            self._init_player(PLAYER_NUM, replay_buffer_data)
+            self._init_player(PLAYER_NUM, self.replay_buffer_data)
 
+        print('6 - ' * 20)
         self._init_judge(PRE_TRAIN_MODEL_FILE)
 
+        print('7 - ' * 20)
         self.last_data_time = time.time() + 100.0
 
-        self.shared_play_net_version = self.mp_ctx.Value('i', -1)
-
+        print('8 - ' * 20)
         self.shared_play_net_file = PLAY_NET_MODEL_FILE
         self.episode_count = 0
         self.step_count = 0
@@ -107,11 +132,10 @@ class Coach(object):
         player_screen_map = dict()
 
         for player_id in player_id_list:
-            image_share = ()
+            image_shape = (CHANNEL, HEIGHT, WIDTH)
             shared_screen_data = \
-                SharedScreen.create_shared_data(image_share, PHI_LENGTH, self.mp_ctx)
+                SharedScreen.create_shared_data(image_shape, PHI_LENGTH, self.mp_ctx)
             player_agent, judge_agent = self.mp_ctx.Pipe()
-
             p = self.mp_ctx.Process(target=start_player,
                                     args=(player_id,
                                           judge_agent,
@@ -119,7 +143,9 @@ class Coach(object):
                                           self.report_queue,
                                           shared_screen_data,
                                           RANDOM_EPISODE_PER_PLAYER))
+
             p.start()
+            print('start player %d' % player_id)
             self.process_list.append(p)
             player_agent_map[player_id] = player_agent
             player_screen_map[player_id] = shared_screen_data
@@ -133,6 +159,7 @@ class Coach(object):
                                       self.player_agent_map,
                                       self.player_screen_map,
                                       self.shared_play_net_version))
+        print('start judge')
         p.start()
         self.process_list.append(p)
 
@@ -168,7 +195,6 @@ class Coach(object):
                         self.score_circe.avg(),
                         self.reward_circe.avg()
                     ))
-
             if time.time() - self.last_data_time > 100.0:
                 print('Coach no data timeout: %.3f' % (time.time() - self.last_data_time))
                 break

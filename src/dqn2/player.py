@@ -10,6 +10,7 @@ from src.dqn2.game_env import GameEnv
 from src.dqn2.judge import SharedScreen
 from src.dqn2.replay_buffer import ReplayBuffer
 from src.ztutils import CirceBuffer
+import traceback
 
 
 def start_player(play_id: int,
@@ -20,16 +21,21 @@ def start_player(play_id: int,
                  random_episode: int
                  ):
     # create player and start it.
-    pid = os.getpid()
-    ppid = os.getppid()
-    print('++++++++++++   Player[%d] starting. pid=[%s] ppid=[%s] ' % (play_id, str(pid), str(ppid)))
-    player = Player(play_id,
-                    judge_agent,
-                    replay_buffer_data,
-                    report_queue,
-                    shared_screen_data,
-                    random_episode)
-    player.start()
+    try:
+
+        pid = os.getpid()
+        ppid = os.getppid()
+        print('++++++++++++   Player[%d] starting. pid=[%s] ppid=[%s] ' % (play_id, str(pid), str(ppid)))
+        player = Player(play_id,
+                        judge_agent,
+                        replay_buffer_data,
+                        report_queue,
+                        shared_screen_data,
+                        random_episode)
+        player.start()
+    except Exception as ex:
+        print('error: [%s]' % str(ex))
+        traceback.print_exc()
 
 
 class Player(object):
@@ -41,12 +47,13 @@ class Player(object):
                  shared_screen_data,
                  random_episode=10
                  ):
+        self.player_id = play_id
         self.rng = np.random.RandomState(RANDOM_SEED + (play_id * 1000))
         self.game = GameEnv(game=GAME_NAME,
                             obs_type=OBSERVATION_TYPE,
                             frame_skip=FRAME_SKIP)
+
         self.action_num = ACTION_NUM
-        self.player_id = play_id
         self.random_episode = random_episode
         self.report_queue = report_queue
 
@@ -67,6 +74,7 @@ class Player(object):
         self.total_step = 0
         self.rng = RANDOM
         self.epsilon = EPSILON_START
+        print('Player[%d] init done.' % self.player_id)
 
     def run_episode(self, random_operation=False):
         ep_reward = 0.0
@@ -77,9 +85,12 @@ class Player(object):
 
         # do no operation steps.
         max_no_op_steps = 5
-        for _ in range(self.rng.randint(PHI_LENGTH, PHI_LENGTH + max_no_op_steps + 1)):
+        no_op_steps = self.rng.randint(PHI_LENGTH, PHI_LENGTH + max_no_op_steps + 1)
+        for _ in range(no_op_steps):
             image = self.process_img(observation)
             observation, reward, episode_done, lives, score = self.game.step(0)
+            # set shared screen mem.
+            self.shared_screen.add_image(image)
             self.experience_recoder.add_step(image, 0, reward)
 
         episode_done = False
@@ -139,7 +150,8 @@ class Player(object):
                 self.run_episode(random_operation=random_operation)
                 count += 1
             except Exception as e:
-                print('player[%d] got exception:%s, %s' % (self.player_id, str(e), str(e.__cause__)))
+                print('player[%d] got exception:[%s]' % (self.player_id, str(e)))
+                traceback.print_exc()
                 break
         print('[ WARNING ] ---- !!!!!!!!!! Player[%d] stop.' % self.player_id)
 
@@ -178,10 +190,13 @@ class ExperienceRecorder(object):
         pass
 
     def add_step(self, image: np.array, action, reward):
+        target_shape = (1, *image.shape)
+        image = image.reshape(target_shape)
         if self.images is None:
-            self.images = image.reshape(1, *image.shape)
+            self.images = image.copy()
         else:
-            self.images = np.row_stack((self.images, image))
+            self.images = np.concatenate((self.images, image))
+
         self.actions.append(action)
         self.rewards.append(reward)
 

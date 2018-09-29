@@ -56,6 +56,24 @@ def reader1(shared_arr, shape, dtype, d):
     print('in reader, x=', np_arr[0, 0, 0])
 
 
+def reader11(arr_ls, shape, dtype, d):
+    print('reader start.')
+    try:
+        size = cacl_size(shape, dtype)
+        shared_arr, arr_2 = arr_ls
+        np_arr: np.ndarray = tonumpyarray(shared_arr, shape, dtype)
+        print('np_arr:', np_arr)
+        print('type:', type(np_arr))
+        print('in reader, waiting...')
+        for i in range(10):
+            time.sleep(2.0 * d + 5)
+            np_arr[0, 0, 0] += 1.0
+            print('in reader, size:', size)
+            print('in reader, x=', np_arr[0, 0, 0])
+    except Exception as ex:
+        print('error: %s, %s' % (str(ex), str(ex.__cause__)))
+
+
 def test5():
     shape = (2, 5)
     dtype = 'uint8'
@@ -98,7 +116,7 @@ def test4():
 
 
 def test3():
-    shape = (300, 400, 5000)
+    shape = (3, 4, 5)
     dtype = 'float32'
 
     start_method = 'forkserver'
@@ -106,7 +124,7 @@ def test3():
     size = cacl_size(shape, dtype)
     mp_ctx = mp.get_context('forkserver')
 
-    shared_arr = mp_ctx.Array(ctypes.c_double, size)
+    shared_arr = mp_ctx.Array(ctypes.c_byte, size)
     np_arr: np.ndarray = tonumpyarray(shared_arr, shape, dtype)
 
     ps = []
@@ -115,11 +133,50 @@ def test3():
         ps.append(p)
         p.start()
 
+    np_arr[0, 0, 0] = 99.99999
+
     for i in range(10):
         print('in main waiting...')
         time.sleep(1.0)
         print('in main, set')
-        np_arr[0, 0, 0] = 99.99999
+        print('in main, size:', size)
+        print('in main, x=', np_arr[0, 0, 0])
+
+    for p in ps:
+        p.join()
+    print('DONE')
+
+    pass
+
+
+def test31():
+    shape = (3, 4, 5)
+    dtype = 'float32'
+
+    start_method = 'forkserver'
+
+    size = cacl_size(shape, dtype)
+    mp_ctx = mp.get_context('forkserver')
+
+    shared_arr = mp_ctx.Array(ctypes.c_byte, size)
+
+    shared_arr2 = mp_ctx.Array(ctypes.c_byte, size)
+    np_arr: np.ndarray = tonumpyarray(shared_arr, shape, dtype)
+
+    msg = 'hello'
+
+    ps = []
+    for i in range(20):
+        p = mp_ctx.Process(target=reader11, args=((shared_arr, shared_arr2), shape, dtype, i))
+        ps.append(p)
+        p.start()
+
+    np_arr[0, 0, 0] = 99.99999
+
+    for i in range(100):
+        print('in main waiting...')
+        time.sleep(1.0)
+        print('in main, set')
         print('in main, size:', size)
         print('in main, x=', np_arr[0, 0, 0])
 
@@ -162,5 +219,5 @@ def tonumpyarray(mp_arr, shape: tuple, dtype=np.float32):
 
 if __name__ == '__main__':
     # mp.freeze_support()
-    test5()
+    test31()
     pass

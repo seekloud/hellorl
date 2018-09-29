@@ -4,13 +4,7 @@
 # FileName: replay_buffer.py
 
 
-import time
-
-import mxnet as mx
 import numpy as np
-from mxnet import nd
-
-import multiprocessing as mp
 
 from src.dqn2.shared_utils import create_shared_data, to_np_array
 

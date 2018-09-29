@@ -41,6 +41,7 @@ def listen_player(player_id,
     while True:
         # FIXME num should be ignore?
         num = player_agent.recv()
+        # print('judge got player[%d] msg: %s' % (player_id, num))
         observation = shared_screen.get_phi()
         merge_queue.put((player_id, observation))
 
@@ -82,7 +83,7 @@ class Judge(object):
         self.step_count = 0
 
         # listen to players.
-        for player_id, player_agent in player_agents:
+        for player_id, player_agent in player_agents.items():
             shared_screen_data = shared_screen_data_map[player_id]
             self.player_agents[player_id] = player_agent
             t = threading.Thread(target=listen_player,
@@ -102,6 +103,7 @@ class Judge(object):
             if obs_len > 0:
                 # print('Exp observation_list: ', len(observation_list))
                 # t0 = time.time()
+                print('choose_batch_action for %d players:%s' % (obs_len, player_list))
                 action_list, max_q_list = self.choose_batch_action(observation_list)
                 # t1 = time.time()
                 for p, action, q_value in zip(player_list, action_list, max_q_list):
@@ -149,14 +151,8 @@ class Judge(object):
     def update_play_net(self):
         latest_version = self.shared_play_net_version.value
         if latest_version > self.play_net_version:
-            # t0 = time.time()
             self.play_net.load_parameters(self.play_net_file, ctx=self.ctx)
-            # t1 = time.time()
-            # print('%s: Experiment loaded play net from [%d] to [%d], time=%.3f]' % (
-            #     time.strftime("%Y-%m-%d %H:%M:%S"),
-            #     self.play_net_version,
-            #     latest_version,
-            #     t1 - t0))
+
             self.play_net_version = latest_version
         return
 
@@ -164,30 +160,34 @@ class Judge(object):
 class SharedScreen(object):
     def __init__(self, image_shape, phi_length, shared_data):
         shape = (phi_length, *image_shape)
-        self.buffer = to_np_array(shared_data, shape, 'uint8')
-        self._index = 0
-        self._count = 0
+        images_data, count_value, index_value = shared_data
+        self.buffer = to_np_array(images_data, shape, 'uint8')
+        self._count = count_value
+        self._index = index_value
         self.phi_length = phi_length
         pass
 
     def get_phi(self):
-        assert self._count >= self.phi_length
-        i = self._index
+        assert self._count.value >= self.phi_length, 'count=%d, phi_length=%d' % (self._count.value, self.phi_length)
+        i = self._index.value
         if i == 0:
             phi = self.buffer
         else:
             p1 = self.buffer[:i]
             p2 = self.buffer[i:]
-            phi = np.vstack((p2, p1))
+            phi = np.concatenate((p2, p1))
         return phi
 
     def add_image(self, image: np.ndarray):
-        self.buffer[self._index] = image
-        self._index = (self._index + 1) % self.phi_length
-        self._count += 1
+        i = self._index.value
+        self.buffer[i] = image
+        self._index.value = (i + 1) % self.phi_length
+        self._count.value += 1
 
     @staticmethod
     def create_shared_data(image_shape, phi_length, mp_ctx):
         shape = (phi_length, *image_shape)
-        data = create_shared_data(mp_ctx, shape, 'uint8')
-        return data
+        images_data = create_shared_data(mp_ctx, shape, 'uint8')
+        count_value = mp_ctx.Value('i', 0)
+        index_value = mp_ctx.Value('i', 0)
+        return images_data, count_value, index_value
