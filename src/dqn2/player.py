@@ -26,7 +26,8 @@ def start_player(play_id: int,
         pid = os.getpid()
         ppid = os.getppid()
         print('++++++++++++   Player[%d] starting. pid=[%s] ppid=[%s] ' % (play_id, str(pid), str(ppid)))
-        player = Player(play_id,
+        player = Player(pid,
+                        play_id,
                         judge_agent,
                         replay_buffer_data,
                         report_queue,
@@ -40,6 +41,7 @@ def start_player(play_id: int,
 
 class Player(object):
     def __init__(self,
+                 process_id,
                  play_id,
                  judge_agent,
                  replay_buffer_data,
@@ -48,7 +50,13 @@ class Player(object):
                  random_episode=10
                  ):
         self.player_id = play_id
-        self.rng = np.random.RandomState(RANDOM_SEED + (play_id * 1000))
+        self.rng = np.random.RandomState(
+            RANDOM_SEED +
+            (play_id * 1000) +
+            process_id +
+            int((time.time() * 10000) % 10000)
+        )
+
         self.game = GameEnv(game=GAME_NAME,
                             obs_type=OBSERVATION_TYPE,
                             frame_skip=FRAME_SKIP)
@@ -72,7 +80,6 @@ class Player(object):
         self.episode_steps_window = CirceBuffer(20)
         self.episode_count = 0
         self.total_step = 0
-        self.rng = RANDOM
         self.epsilon = EPSILON_START
         print('Player[%d] init done.' % self.player_id)
 

@@ -4,12 +4,10 @@
 # FileName: config.py
 
 
-import time
-import sys
 import configparser
 import os
-import mxnet
-import numpy
+import sys
+import time
 
 
 def load_conf(conf_file):
@@ -41,7 +39,7 @@ GPU_INDEX = dqn_conf.getint('GPU_INDEX')
 PRE_TRAIN_MODEL_FILE = dqn_conf.get('PRE_TRAIN_MODEL_FILE')
 EPOCH_NUM = dqn_conf.getint('EPOCH_NUM')
 EPOCH_LENGTH = dqn_conf.getint('EPOCH_LENGTH')
-RANDOM_SEED = int(time.time() * 1000) % 100000000
+RANDOM_SEED = int(time.time() * 100000) % 100000000
 
 """game env"""
 # GAME_NAME = 'riverraid'
@@ -98,9 +96,6 @@ PLAY_NET_UPDATE_INTERVAL = dqn_conf.getint('PLAY_NET_UPDATE_INTERVAL')
 
 TARGET_NET_UPDATE_INTERVAL = dqn_conf.getint('TARGET_NET_UPDATE_INTERVAL')
 POLICY_NET_SAVE_INTERVAL = dqn_conf.getint('POLICY_NET_SAVE_INTERVAL')
-
-RANDOM = numpy.random.RandomState(RANDOM_SEED)
-mxnet.random.seed(RANDOM_SEED)
 
 
 def _print_conf():
