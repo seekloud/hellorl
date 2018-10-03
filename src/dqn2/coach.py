@@ -17,6 +17,7 @@ from src.dqn2.q_learning import QLearning
 from src.dqn2.replay_buffer import ReplayBuffer, create_replay_buffer_data
 from src.ztutils import CirceBuffer
 import time
+import src.ztutils as ztutils
 
 
 def start_coach():
@@ -25,12 +26,9 @@ def start_coach():
     ppid = os.getppid()
     print('++++++++++++++++++ Coach starting.... pid=[%s] ppid=[%s]' % (str(pid), str(ppid)))
     coach = Coach()
-    # coach.start()
-    print('waiting...')
-    time.sleep(50)
-    print('lalala')
-    time.sleep(50)
-
+    print('start coach waiting...')
+    time.sleep(1)
+    coach.start()
     print('Coach finish.')
 
 
@@ -79,7 +77,6 @@ class Coach(object):
 
         print('3 - ' * 20)
         self.shared_play_net_version = self.mp_ctx.Value('i', -1)
-        print('shared_play_net_version: ', type(self.shared_play_net_version))
 
         self.replay_buffer_data = \
             create_replay_buffer_data(HEIGHT, WIDTH, CHANNEL, BUFFER_MAX, self.mp_ctx)
@@ -95,16 +92,9 @@ class Coach(object):
                                           self.replay_buffer_data)
 
         print('5 - ' * 20)
-        self.player_agent_map, self.player_screen_map = \
-            self._init_player(PLAYER_NUM, self.replay_buffer_data)
-
-        print('6 - ' * 20)
-        self._init_judge(PRE_TRAIN_MODEL_FILE)
-
-        print('7 - ' * 20)
         self.last_data_time = time.time() + 100.0
 
-        print('8 - ' * 20)
+        print('6 - ' * 20)
         self.shared_play_net_file = PLAY_NET_MODEL_FILE
         self.episode_count = 0
         self.step_count = 0
@@ -116,6 +106,15 @@ class Coach(object):
         self.step_circe = CirceBuffer(self.stat_range)
         self.score_circe = CirceBuffer(self.stat_range)
         self.reward_circe = CirceBuffer(self.stat_range)
+
+        ztutils.mkdir_if_not_exist(MODEL_PATH)
+
+        print('7 - ' * 20)
+        self.player_agent_map, self.player_screen_map = \
+            self._init_player(PLAYER_NUM, self.replay_buffer_data)
+
+        print('8 - ' * 20)
+        self._init_judge(PRE_TRAIN_MODEL_FILE)
 
     """ 
     .
@@ -145,7 +144,6 @@ class Coach(object):
                                           RANDOM_EPISODE_PER_PLAYER))
 
             p.start()
-            print('start player %d' % player_id)
             self.process_list.append(p)
             player_agent_map[player_id] = player_agent
             player_screen_map[player_id] = shared_screen_data
@@ -156,10 +154,10 @@ class Coach(object):
 
         p = self.mp_ctx.Process(target=start_judge,
                                 args=(model_file,
+                                      self.shared_play_net_file,
                                       self.player_agent_map,
                                       self.player_screen_map,
                                       self.shared_play_net_version))
-        print('start judge')
         p.start()
         self.process_list.append(p)
 
@@ -185,7 +183,8 @@ class Coach(object):
                 last_report = self.episode_count
 
                 print(
-                    '\nCoach: episode=%d train=%d t1=%.3f t2=%.3f t_step=%d avg_step=%.2f avg_score=%.2f avg_reward=%.4f\n' % (
+                    '\n[%s] Coach: episode=%d train=%d t1=%.3f t2=%.3f t_step=%d avg_step=%.2f avg_score=%.2f avg_reward=%.4f\n' % (
+                        time.strftime("%Y-%m-%d %H:%M:%S"),
                         self.episode_count,
                         self.train_count,
                         (t1 - t0),
@@ -206,12 +205,14 @@ class Coach(object):
 
     def _read_report(self):
         if not self.report_queue.empty():
-            report = self.report_queue.get()
+            player_id, report = self.report_queue.get()
             (ep_step, ep_score, ep_reward) = report
+            print('\n[%s] Coach got report from player[%d]: %d, %.2f, %.4f' %
+                  (time.strftime("%Y-%m-%d %H:%M:%S"), player_id, ep_step, ep_score, ep_reward))
             self.step_circe.add(ep_step)
             self.score_circe.add(ep_score)
             self.reward_circe.add(ep_reward)
-
+            self.last_data_time = time.time()
             self.step_count += ep_step
             self.episode_count += 1
 
@@ -224,8 +225,11 @@ class Coach(object):
             t1 = time.time()
             loss = self.q_learning.train_policy_net(bs, images, actions, rewards, terminals)
             t2 = time.time()
-            print('\nTrain time analysis: t1=%.4f t2=%.4f\n' % (t1 - t0, t2 - t1))
+            # print('\nTrain time analysis: t1=%.4f t2=%.4f step=%d\n' % (t1 - t0, t2 - t1, self.step_count))
             return loss
+        else:
+            print('waiting init steps...       ', self.step_count)
+            time.sleep(2.0)
 
     def _update_play_net(self):
         file_path = self.shared_play_net_file

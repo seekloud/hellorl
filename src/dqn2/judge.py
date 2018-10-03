@@ -13,9 +13,11 @@ from src.dqn2.shared_utils import to_np_array, create_shared_data
 from mxnet import nd
 import signal
 import numpy as np
+import traceback
 
 
 def start_judge(model_file,
+                play_net_file_path,
                 player_agent_map,
                 player_screen_map,
                 shared_play_net_version
@@ -24,6 +26,7 @@ def start_judge(model_file,
     ppid = os.getppid()
     print('++++++++++++   Judge starting... pid=[%s] ppid=[%s] ' % (str(pid), str(ppid)))
     judge = Judge(model_file,
+                  play_net_file_path,
                   player_agent_map,
                   player_screen_map,
                   shared_play_net_version
@@ -61,6 +64,7 @@ class Judge(object):
 
     def __init__(self,
                  model_file,
+                 play_net_file_path,
                  player_agents: dict,
                  shared_screen_data_map: dict,
                  shared_play_net_version):
@@ -77,7 +81,7 @@ class Judge(object):
 
         self.play_net_version = -1
         self.shared_play_net_version = shared_play_net_version
-        self.play_net_file = PLAY_NET_MODEL_FILE
+        self.play_net_file = play_net_file_path
         self.local_observation_queue = queue.Queue()
         self.player_agents = player_agents
         self.step_count = 0
@@ -96,28 +100,38 @@ class Judge(object):
             t.start()
 
     def start(self):
+        last_report = 0
 
-        while not _killed:
-            player_list, observation_list = self._read_observations()
-            obs_len = len(observation_list)
-            if obs_len > 0:
-                # print('Exp observation_list: ', len(observation_list))
-                # t0 = time.time()
-                print('choose_batch_action for %d players:%s' % (obs_len, player_list))
-                action_list, max_q_list = self.choose_batch_action(observation_list)
-                # t1 = time.time()
-                for p, action, q_value in zip(player_list, action_list, max_q_list):
-                    # print('Exp send action[%d] to player[%d]' % (action, p))
-                    out_pipe = self.player_agents[p]
-                    out_pipe.send((action, q_value))
-                self.step_count += len(player_list)
-                # t2 = time.time()
-                # print('experiment get choose_batch_action for [%d] players, choose time=%.2f, send time=%.2f' %
-                #       (len(player_list), (t1 - t0), (t2 - t1)))
-                # print('-----------------------------------')
-            self.update_play_net()
+        try:
+            while not _killed:
+                player_list, observation_list = self._read_observations()
+                obs_len = len(observation_list)
+                if obs_len > 0:
+                    #print('Judge obs_len:', obs_len)
 
-        print('Judge stopped.')
+                    # print('Exp observation_list: ', len(observation_list))
+                    # t0 = time.time()
+                    # print('choose_batch_action for %d players:%s' % (obs_len, player_list))
+                    action_list, max_q_list = self.choose_batch_action(observation_list)
+                    # t1 = time.time()
+                    for p, action, q_value in zip(player_list, action_list, max_q_list):
+                        # print('Exp send action[%d] to player[%d]' % (action, p))
+                        out_pipe = self.player_agents[p]
+                        out_pipe.send((action, q_value))
+                    self.step_count += len(player_list)
+                    # t2 = time.time()
+                    # print('experiment get choose_batch_action for [%d] players, choose time=%.2f, send time=%.2f' %
+                    #       (len(player_list), (t1 - t0), (t2 - t1)))
+                    # print('-----------------------------------')
+                if self.step_count - last_report > 1000:
+                    print('Judge process steps:', self.step_count)
+                    last_report = self.step_count
+                self.update_play_net()
+        except Exception as ex:
+            print('Judge got exception')
+            traceback.print_exc()
+
+        print('[ WARNING ] ---- !!!!!!!!!!  Judge stopped.')
 
     def _read_observations(self):
         player_list = []
@@ -151,6 +165,7 @@ class Judge(object):
     def update_play_net(self):
         latest_version = self.shared_play_net_version.value
         if latest_version > self.play_net_version:
+            print('Judge update_play_net')
             self.play_net.load_parameters(self.play_net_file, ctx=self.ctx)
 
             self.play_net_version = latest_version

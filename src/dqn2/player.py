@@ -128,8 +128,9 @@ class Player(object):
         else:
             self.experience_recoder.clean()
 
-        print('Player[%d] Episode[%d] done: time=%.3f step=%d score=%d reward=%.3f' %
-              (self.player_id,
+        print('[%s] Player[%d] Episode[%d] done: time=%.3f step=%d score=%d reward=%.3f' %
+              (time.strftime("%Y-%m-%d %H:%M:%S"),
+               self.player_id,
                self.episode_count,
                (t1 - t0),
                ep_step,

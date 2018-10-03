@@ -37,7 +37,6 @@ class QLearning(object):
         self.trainer = gluon.Trainer(self.policy_net.collect_params(), OPTIMIZER,
                                      {'learning_rate': LEARNING_RATE,
                                       'wd': WEIGHT_DECAY})
-
         self.loss_func = gluon.loss.L2Loss()
 
     def _update_target_net(self):
@@ -126,9 +125,9 @@ class QLearning(object):
 
         self.time_statistic.add(t1 - t0)
 
-        if (self.train_count + 1) % 2 == 0:
-            print('Train [%d] finish. avg_train_time: %.3f' %
-                  (self.train_count, self.time_statistic.avg()))
+        if (self.train_count + 1) % 10 == 0:
+            print('[%s] Train [%d] finish. avg_train_time: %.3f' %
+                  (time.strftime("%Y-%m-%d %H:%M:%S"), self.train_count, self.time_statistic.avg()))
 
         return total_loss
 

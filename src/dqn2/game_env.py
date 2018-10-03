@@ -14,6 +14,7 @@ class GameEnv(object):
                                 obs_type=obs_type,
                                 frameskip=frame_skip,
                                 repeat_action_probability=0.05)
+        self.game_name = game
         self.step_count = 0
         self.gym_env.reset()
         self.lives = self.gym_env.ale.lives()
@@ -27,6 +28,8 @@ class GameEnv(object):
 
         if self.lives > new_lives:
             reward = NEGATIVE_REWARD
+            if self.game_name == 'breakout':
+                self.gym_env.ale.act(1)
         self.lives = new_lives
         return observation, reward, done, new_lives, score
 
