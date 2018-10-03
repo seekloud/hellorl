@@ -103,6 +103,8 @@ class Coach(object):
         self.q_learning = QLearning(self.ctx, PRE_TRAIN_MODEL_FILE)
 
         self.stat_range = 100
+        self.record_ep = 0
+        self.time_circe = CirceBuffer(self.stat_range)
         self.step_circe = CirceBuffer(self.stat_range)
         self.score_circe = CirceBuffer(self.stat_range)
         self.reward_circe = CirceBuffer(self.stat_range)
@@ -164,40 +166,43 @@ class Coach(object):
     def start(self):
         last_report = 0
 
-        while not _killed:
-            t0 = time.time()
-            self._read_report()
-            t1 = time.time()
-            self._train()
-            t2 = time.time()
+        try:
+            while not _killed:
+                t0 = time.time()
+                self._read_report()
+                t1 = time.time()
+                self._train()
+                t2 = time.time()
 
-            if (self.train_count + 1) % PLAY_NET_UPDATE_INTERVAL == 0:
-                self._update_play_net()
+                if (self.train_count + 1) % PLAY_NET_UPDATE_INTERVAL == 0:
+                    self._update_play_net()
 
-            if (self.train_count + 1) % POLICY_NET_SAVE_INTERVAL == 0:
-                self._save_policy_net()
+                if (self.train_count + 1) % POLICY_NET_SAVE_INTERVAL == 0:
+                    self._save_policy_net()
 
-            t3 = time.time()
+                t3 = time.time()
 
-            if (self.episode_count - last_report) > 1:
-                last_report = self.episode_count
+                if (self.episode_count - last_report) > 10:
+                    last_report = self.episode_count
 
-                print(
-                    '\n[%s] Coach: episode=%d train=%d t1=%.3f t2=%.3f t_step=%d avg_step=%.2f avg_score=%.2f avg_reward=%.4f\n' % (
-                        time.strftime("%Y-%m-%d %H:%M:%S"),
-                        self.episode_count,
-                        self.train_count,
-                        (t1 - t0),
-                        (t2 - t1),
-                        self.step_count,
-                        self.step_circe.avg(),
-                        self.score_circe.avg(),
-                        self.reward_circe.avg()
-                    ))
-            if time.time() - self.last_data_time > 100.0:
-                print('Coach no data timeout: %.3f' % (time.time() - self.last_data_time))
-                break
-
+                    print(
+                        '\n[%s] Coach: episode=%d train=%d record_ep=%d t_step=%d avg_time=%.2f avg_step=%.2f avg_score=%.2f avg_reward=%.3f' % (
+                            time.strftime("%Y-%m-%d %H:%M:%S"),
+                            self.episode_count,
+                            self.train_count,
+                            self.record_ep,
+                            self.step_count,
+                            self.time_circe.avg(),
+                            self.step_circe.avg(),
+                            self.score_circe.avg(),
+                            self.reward_circe.avg()
+                        ))
+                if time.time() - self.last_data_time > 100.0:
+                    print('Coach no data timeout: %.3f' % (time.time() - self.last_data_time))
+                    break
+        except Exception as ex:
+            print('Coach got exception:', ex)
+            traceback.print_exc()
         print('[ WARNING ] ----------------------- Coach stop')
         for p in self.process_list:
             p.terminate()
@@ -206,15 +211,59 @@ class Coach(object):
     def _read_report(self):
         if not self.report_queue.empty():
             player_id, report = self.report_queue.get()
-            (ep_step, ep_score, ep_reward) = report
-            print('\n[%s] Coach got report from player[%d]: %d, %.2f, %.4f' %
-                  (time.strftime("%Y-%m-%d %H:%M:%S"), player_id, ep_step, ep_score, ep_reward))
+            (ep_count, ep_time, ep_record, ep_step, ep_score, ep_reward) = report
+            # (begin, end, mark, ep_count, ep_step, ep_score, ep_reward) = report
+            print(
+                '\n[%s] Coach got report from player[%d]: ep_count=%d time=%.3f record=%s steps=%d score=%.2f reward=%.4f' %
+                (time.strftime("%Y-%m-%d %H:%M:%S"), player_id, ep_count, ep_time, ep_record, ep_step, ep_score,
+                 ep_reward))
+
+            # FIXED for test.
+            # self._check_buffer_only_for_debug(begin, end, player_id, ep_count)
+            if ep_record:
+                self.record_ep += 1
+
+            self.time_circe.add(ep_time)
             self.step_circe.add(ep_step)
             self.score_circe.add(ep_score)
             self.reward_circe.add(ep_reward)
             self.last_data_time = time.time()
             self.step_count += ep_step
             self.episode_count += 1
+
+    def _check_buffer_only_for_debug(self, begin, end, player_id, ep_count):
+        mark = player_id * 100 + ep_count
+
+        target_images, target_actions, target_rewards = self.replay_buffer.get_slice_only_for_debug(begin, end)
+
+        expected_images = np.ones_like(target_images) * mark
+        expected_actions = np.ones_like(target_actions) * mark
+        expected_rewards = np.ones_like(target_rewards) * mark
+
+        t1 = np.array_equal(target_images, expected_images)
+        t2 = np.array_equal(target_actions, expected_actions)
+        t3 = np.array_equal(target_rewards, expected_rewards)
+
+        if not t1:
+            print('\n!!!!  CHECK ERROR: player_id=%d ep_count=%d from %d to %d' % (player_id, ep_count, begin, end))
+            print('expected_images=', expected_images)
+            print('target_images=', target_images)
+
+        if not t2:
+            print('\n!!!!  CHECK ERROR: player_id=%d ep_count=%d from %d to %d' % (player_id, ep_count, begin, end))
+            print('expected_actions=', expected_actions)
+            print('target_actions=', target_actions)
+
+        if not t3:
+            print('\n!!!!  CHECK ERROR: player_id=%d ep_count=%d from %d to %d' % (player_id, ep_count, begin, end))
+            print('expected_rewards=', expected_rewards)
+            print('target_rewards=', target_rewards)
+        rst = t1 and t2 and t3
+
+        if rst:
+            print('\n!!!!  CHECK SUCCESS: player_id=%d ep_count=%d from %d to %d' % (player_id, ep_count, begin, end))
+
+        return rst
 
     def _train(self):
         if self.step_count > 100:

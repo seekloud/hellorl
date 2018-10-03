@@ -76,7 +76,7 @@ class Player(object):
         self.shared_screen = SharedScreen(image_shape, PHI_LENGTH, shared_screen_data)
         self.experience_recoder = ExperienceRecorder()
 
-        # self.episode_score_window = CirceBuffer(20)
+        self.episode_score_window = CirceBuffer(20)
         self.episode_steps_window = CirceBuffer(20)
         self.episode_count = 0
         self.total_step = 0
@@ -122,24 +122,28 @@ class Player(object):
         t1 = time.time()
 
         self.episode_steps_window.add(ep_step)
+        self.episode_score_window.add(ep_score)
         self.episode_count += 1
 
-        ep_report = (ep_step, ep_score, ep_reward)
-        self.report_queue.put((self.player_id, ep_report))
-
         # record experience
-        if ep_step >= 0:  # FIXME just for test.
-            # if step_count >= self.episode_steps_window.avg():
-            experience = self.experience_recoder.pop_experience()
+        # begin, end, mark = 0, 0, 0
+        # if ep_step >= 0:  # FIXED just for test.
+        record = ep_score >= self.episode_score_window.avg()
+        if record:
+            experience = self.experience_recoder.pop_experience(self.player_id, self.episode_count)
             self.replay_buffer.add_experience(*experience)
         else:
             self.experience_recoder.clean()
+        ep_time = t1 - t0
+        ep_report = (self.episode_count, ep_time, record, ep_step, ep_score, ep_reward)
+        self.report_queue.put((self.player_id, ep_report))
 
-        print('[%s] Player[%d] Episode[%d] done: time=%.3f step=%d score=%d reward=%.3f' %
+        print('[%s] Player[%d] Episode[%d] done: time=%.3f record=%s, step=%d score=%d reward=%.3f' %
               (time.strftime("%Y-%m-%d %H:%M:%S"),
                self.player_id,
                self.episode_count,
-               (t1 - t0),
+               ep_time,
+               record,
                ep_step,
                ep_score,
                ep_reward
@@ -157,6 +161,11 @@ class Player(object):
             try:
                 self.run_episode(random_operation=random_operation)
                 count += 1
+
+                # FIXED for test
+                # delay = self.rng.randint(1, 10)
+                # print('player[%d] delay [%d]s next episode game' % (self.player_id, delay))
+                # time.sleep(self.rng.randint(1, 10))
             except Exception as e:
                 print('player[%d] got exception:[%s]' % (self.player_id, str(e)))
                 traceback.print_exc()
@@ -208,12 +217,21 @@ class ExperienceRecorder(object):
         self.actions.append(action)
         self.rewards.append(reward)
 
-    def pop_experience(self):
+    def pop_experience(self, player_id, episode_count):
         length = len(self.actions)
         experience = length, self.images, self.actions, self.rewards
-        self.images = None
-        self.actions = []
-        self.rewards = []
+
+        # FIXED for test
+        # length = 3
+        # mark = player_id * 100 + episode_count
+        # self.images = self.images[0:3]
+        # self.images = np.ones_like(self.images) * mark
+        # self.actions = [mark for i in range(3)]
+        # self.rewards = [mark for i in range(3)]
+        # experience1 = length, self.images, self.actions, self.rewards
+
+        self.clean()
+        # return experience1, mark
         return experience
 
     def clean(self):

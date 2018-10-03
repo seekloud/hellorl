@@ -73,6 +73,8 @@ class ReplayBuffer(object):
             top = self.top_value.value
             back_capacity = self.capacity - top
 
+            begin = top
+
             if length <= back_capacity:
                 self.images[top: (top + length)] = images
                 self.actions[top: (top + length)] = actions
@@ -93,6 +95,9 @@ class ReplayBuffer(object):
                 self.rewards[:rest] = rewards[back_capacity:]
                 self.terminals[:rest] = terminals[back_capacity:]
                 self.top_value.value = rest
+            end = self.top_value.value
+
+            return begin, end
 
     def random_batch(self, batch_size):
 
@@ -123,6 +128,16 @@ class ReplayBuffer(object):
             terminals = np.take(self.terminals, indices, axis=0)
 
             return images, actions, rewards, terminals
+
+    def get_slice_only_for_debug(self, begin, end):
+        with self.lock:
+            target_images = self.images[begin: end]
+            target_actions = self.actions[begin: end]
+            target_rewards = self.rewards[begin: end]
+            return target_images, target_actions, target_rewards
+
+
+import multiprocessing as mp
 
 
 def test_add():
