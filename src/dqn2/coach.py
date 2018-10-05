@@ -182,11 +182,11 @@ class Coach(object):
 
                 t3 = time.time()
 
-                if (self.episode_count - last_report) > 10:
+                if (self.episode_count - last_report) > 100:
                     last_report = self.episode_count
 
                     print(
-                        '\n[%s] Coach: episode=%d train=%d record_ep=%d t_step=%d avg_time=%.2f avg_step=%.2f avg_score=%.2f avg_reward=%.3f' % (
+                        '\n[%s] Coach stat: episode=%d train=%d record_ep=%d t_step=%d avg_time=%.2f avg_step=%.2f avg_score=%.2f avg_reward=%.3f' % (
                             time.strftime("%Y-%m-%d %H:%M:%S"),
                             self.episode_count,
                             self.train_count,

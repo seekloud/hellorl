@@ -125,7 +125,7 @@ class QLearning(object):
 
         self.time_statistic.add(t1 - t0)
 
-        if (self.train_count + 1) % 10 == 0:
+        if (self.train_count + 1) % 100 == 0:
             print('\n[%s] Train [%d] finish. avg_train_time: %.3f' %
                   (time.strftime("%Y-%m-%d %H:%M:%S"), self.train_count, self.time_statistic.avg()))
 

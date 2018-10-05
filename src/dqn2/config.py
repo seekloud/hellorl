@@ -40,6 +40,7 @@ PRE_TRAIN_MODEL_FILE = dqn_conf.get('PRE_TRAIN_MODEL_FILE')
 EPOCH_NUM = dqn_conf.getint('EPOCH_NUM')
 EPOCH_LENGTH = dqn_conf.getint('EPOCH_LENGTH')
 RANDOM_SEED = int(time.time() * 100000) % 100000000
+PLAYER_NUM = dqn_conf.getint('PLAYER_NUM')
 
 """game env"""
 # GAME_NAME = 'riverraid'
@@ -52,24 +53,26 @@ HEIGHT = dqn_conf.getint('HEIGHT')
 FRAME_SKIP = dqn_conf.getint('FRAME_SKIP')
 
 """player"""
-TRAIN_PER_STEP = dqn_conf.getint('TRAIN_PER_STEP')
+RANDOM_EPISODE_PER_PLAYER = dqn_conf.getint('RANDOM_EPISODE_PER_PLAYER')
+EPSILON_MIN = dqn_conf.getfloat('EPSILON_MIN')
+EPSILON_START = dqn_conf.getfloat('EPSILON_START')
+EPSILON_DECAY = dqn_conf.getint('EPSILON_DECAY')
+EPSILON_RATE = (EPSILON_START - EPSILON_MIN) * 1.0 / (EPSILON_DECAY + 0.001)
 
 """replay buffer"""
 PHI_LENGTH = dqn_conf.getint('PHI_LENGTH')
 BUFFER_MAX = dqn_conf.getint('BUFFER_MAX')
 BEGIN_RANDOM_STEP = dqn_conf.getint('BEGIN_RANDOM_STEP')
 
-"""q-learning"""
-DISCOUNT = dqn_conf.getfloat('DISCOUNT')
-EPSILON_MIN = dqn_conf.getfloat('EPSILON_MIN')
-EPSILON_START = dqn_conf.getfloat('EPSILON_START')
-EPSILON_DECAY = dqn_conf.getint('EPSILON_DECAY')
-EPSILON_RATE = (EPSILON_START - EPSILON_MIN) * 1.0 / EPSILON_DECAY
+"""coach"""
+PLAY_NET_UPDATE_INTERVAL = dqn_conf.getint('PLAY_NET_UPDATE_INTERVAL')
+TARGET_NET_UPDATE_INTERVAL = dqn_conf.getint('TARGET_NET_UPDATE_INTERVAL')
+POLICY_NET_SAVE_INTERVAL = dqn_conf.getint('POLICY_NET_SAVE_INTERVAL')
 
-UPDATE_TARGET_BY_EPISODE_END = dqn_conf.getint('UPDATE_TARGET_BY_EPISODE_END')
-UPDATE_TARGET_BY_EPISODE_BEGIN = dqn_conf.getint('UPDATE_TARGET_BY_EPISODE_BEGIN')
-UPDATE_TARGET_DECAY = dqn_conf.getint('UPDATE_TARGET_DECAY')
-UPDATE_TARGET_RATE = (UPDATE_TARGET_BY_EPISODE_END - UPDATE_TARGET_BY_EPISODE_BEGIN) / UPDATE_TARGET_DECAY + 0.000001
+"""q-learning"""
+BATCH_SIZE = dqn_conf.getint('BATCH_SIZE')
+
+DISCOUNT = dqn_conf.getfloat('DISCOUNT')
 
 OPTIMIZER = dqn_conf.get('OPTIMIZER')
 LEARNING_RATE = dqn_conf.getfloat('LEARNING_RATE')
@@ -86,16 +89,7 @@ BEGIN_TIME = time.strftime("%Y%m%d_%H%M%S")
 EDITED_TIME = dqn_conf.get("EDITED_TIME")
 
 FILE_PREFIX = dqn_conf.get('FILE_PREFIX')
-PLAY_NET_MODEL_FILE = MODEL_PATH + '/' + FILE_PREFIX + GAME_NAME + '_' + BEGIN_TIME + '.play_net'
-
-BATCH_SIZE = dqn_conf.getint('BATCH_SIZE')
-PLAYER_NUM = dqn_conf.getint('PLAYER_NUM')
-
-RANDOM_EPISODE_PER_PLAYER = dqn_conf.getint('RANDOM_EPISODE_PER_PLAYER')
-PLAY_NET_UPDATE_INTERVAL = dqn_conf.getint('PLAY_NET_UPDATE_INTERVAL')
-
-TARGET_NET_UPDATE_INTERVAL = dqn_conf.getint('TARGET_NET_UPDATE_INTERVAL')
-POLICY_NET_SAVE_INTERVAL = dqn_conf.getint('POLICY_NET_SAVE_INTERVAL')
+PLAY_NET_MODEL_FILE = MODEL_PATH + '/' + FILE_PREFIX + '_' + GAME_NAME + '_' + BEGIN_TIME + '.play_net'
 
 
 def _print_conf():

@@ -123,7 +123,7 @@ class Judge(object):
                     # print('experiment get choose_batch_action for [%d] players, choose time=%.2f, send time=%.2f' %
                     #       (len(player_list), (t1 - t0), (t2 - t1)))
                     # print('-----------------------------------')
-                if self.step_count - last_report > 1000:
+                if self.step_count - last_report > 10000:
                     print('Judge process steps:', self.step_count)
                     last_report = self.step_count
                 self.update_play_net()
@@ -165,7 +165,7 @@ class Judge(object):
     def update_play_net(self):
         latest_version = self.shared_play_net_version.value
         if latest_version > self.play_net_version:
-            print('Judge update_play_net')
+            # print('Judge update_play_net')
             self.play_net.load_parameters(self.play_net_file, ctx=self.ctx)
 
             self.play_net_version = latest_version

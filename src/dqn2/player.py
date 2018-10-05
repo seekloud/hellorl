@@ -138,16 +138,16 @@ class Player(object):
         ep_report = (self.episode_count, ep_time, record, ep_step, ep_score, ep_reward)
         self.report_queue.put((self.player_id, ep_report))
 
-        print('[%s] Player[%d] Episode[%d] done: time=%.3f record=%s, step=%d score=%d reward=%.3f' %
-              (time.strftime("%Y-%m-%d %H:%M:%S"),
-               self.player_id,
-               self.episode_count,
-               ep_time,
-               record,
-               ep_step,
-               ep_score,
-               ep_reward
-               ))
+        # print('[%s] Player[%d] Episode[%d] done: time=%.3f record=%s, step=%d score=%d reward=%.3f' %
+        #       (time.strftime("%Y-%m-%d %H:%M:%S"),
+        #        self.player_id,
+        #        self.episode_count,
+        #        ep_time,
+        #        record,
+        #        ep_step,
+        #        ep_score,
+        #        ep_reward
+        #        ))
 
         return
 
