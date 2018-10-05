@@ -102,7 +102,7 @@ class Coach(object):
 
         self.q_learning = QLearning(self.ctx, PRE_TRAIN_MODEL_FILE)
 
-        self.stat_range = 100
+        self.stat_range = COACH_STAT_RANGE
         self.record_ep = 0
         self.time_circe = CirceBuffer(self.stat_range)
         self.step_circe = CirceBuffer(self.stat_range)
@@ -182,7 +182,7 @@ class Coach(object):
 
                 t3 = time.time()
 
-                if (self.episode_count - last_report) > 100:
+                if (self.episode_count - last_report) >= 100:
                     last_report = self.episode_count
 
                     print(
