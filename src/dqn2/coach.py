@@ -204,6 +204,7 @@ class Coach(object):
             print('Coach got exception:', ex)
             traceback.print_exc()
         print('[ WARNING ] ----------------------- Coach stop')
+        os.remove(self.shared_play_net_file)
         for p in self.process_list:
             p.terminate()
         print('----------------')
