@@ -54,6 +54,7 @@ FRAME_SKIP = dqn_conf.getint('FRAME_SKIP')
 
 """player"""
 RANDOM_EPISODE_PER_PLAYER = dqn_conf.getint('RANDOM_EPISODE_PER_PLAYER')
+FILTER_EXPERIENCE = dqn_conf.getboolean('FILTER_EXPERIENCE')
 EPSILON_MIN = dqn_conf.getfloat('EPSILON_MIN')
 EPSILON_START = dqn_conf.getfloat('EPSILON_START')
 EPSILON_DECAY = dqn_conf.getint('EPSILON_DECAY')
@@ -62,7 +63,7 @@ EPSILON_RATE = (EPSILON_START - EPSILON_MIN) * 1.0 / (EPSILON_DECAY + 0.001)
 """replay buffer"""
 PHI_LENGTH = dqn_conf.getint('PHI_LENGTH')
 BUFFER_MAX = dqn_conf.getint('BUFFER_MAX')
-BEGIN_RANDOM_STEP = dqn_conf.getint('BEGIN_RANDOM_STEP')
+
 
 """coach"""
 COACH_STAT_RANGE = dqn_conf.getint('COACH_STAT_RANGE')

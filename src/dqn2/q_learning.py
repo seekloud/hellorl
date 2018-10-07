@@ -23,7 +23,6 @@ class QLearning(object):
         self.train_count = 0
 
         self.time_statistic = CirceBuffer(300)
-        self.target_net_update_interval = TARGET_NET_UPDATE_INTERVAL
 
         self.policy_net = get_net(ACTION_NUM, ctx=self.ctx)
         self.target_net = get_net(ACTION_NUM, ctx=self.ctx)
@@ -32,16 +31,17 @@ class QLearning(object):
             print('%s: QLearning read trained model from [%s]' % (time.strftime("%Y-%m-%d %H:%M:%S"), model_file))
             self.policy_net.load_parameters(model_file, ctx=self.ctx)
 
-        self._update_target_net()
+        self.update_target_net()
 
         self.trainer = gluon.Trainer(self.policy_net.collect_params(), OPTIMIZER,
                                      {'learning_rate': LEARNING_RATE,
                                       'wd': WEIGHT_DECAY})
         self.loss_func = gluon.loss.L2Loss()
 
-    def _update_target_net(self):
+    def update_target_net(self):
         self.update_count += 1
-        print('QLearning update_target_net[%d] at train[%d]' % (self.update_count, self.train_count))
+        print('[%s] QLearning update target net[%d] at train[%d]' %
+              (time.strftime("%Y-%m-%d %H:%M:%S"), self.update_count, self.train_count))
         copy_parameters(self.policy_net, self.target_net)
 
     def train_policy_net(self,
@@ -115,9 +115,6 @@ class QLearning(object):
             g_utils.grad_clipping(params, GRAD_CLIPPING_THETA, self.ctx)
 
         self.trainer.step(batch_size)
-
-        if (self.train_count + 1) % self.target_net_update_interval == 0:
-            self._update_target_net()
 
         # total_loss = 0.0
         total_loss = loss.mean().asscalar()

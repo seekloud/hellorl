@@ -107,7 +107,7 @@ class Judge(object):
                 player_list, observation_list = self._read_observations()
                 obs_len = len(observation_list)
                 if obs_len > 0:
-                    #print('Judge obs_len:', obs_len)
+                    # print('Judge obs_len:', obs_len)
 
                     # print('Exp observation_list: ', len(observation_list))
                     # t0 = time.time()
@@ -123,8 +123,15 @@ class Judge(object):
                     # print('experiment get choose_batch_action for [%d] players, choose time=%.2f, send time=%.2f' %
                     #       (len(player_list), (t1 - t0), (t2 - t1)))
                     # print('-----------------------------------')
-                if self.step_count - last_report > 10000:
+                if self.step_count - last_report > 1000:
                     print('Judge process steps:', self.step_count)
+                    # print('Judge gc_isenable()=%s count=%s' % (gc.isenabled(), gc.get_count()))
+                    # gc.collect()
+                    # t0 = time.time()
+                    # n = gc.collect()
+                    # t1 = time.time()
+                    # print('judge gc done: [%d] time=%f' % (n, (t1 - t0)))
+
                     last_report = self.step_count
                 self.update_play_net()
         except Exception as ex:

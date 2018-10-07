@@ -12,12 +12,14 @@ from src.dqn2.config import *
 from src.dqn2.config import _print_conf
 from src.dqn2.judge import start_judge, SharedScreen
 from src.dqn2.network import save_model_to_file
-from src.dqn2.player import *
+from src.dqn2.player import Player,start_player
 from src.dqn2.q_learning import QLearning
 from src.dqn2.replay_buffer import ReplayBuffer, create_replay_buffer_data
 from src.ztutils import CirceBuffer
 import time
 import src.ztutils as ztutils
+import traceback
+import numpy as np
 
 
 def start_coach():
@@ -102,6 +104,8 @@ class Coach(object):
 
         self.q_learning = QLearning(self.ctx, PRE_TRAIN_MODEL_FILE)
 
+        self.target_net_update_count = 0
+
         self.stat_range = COACH_STAT_RANGE
         self.record_ep = 0
         self.time_circe = CirceBuffer(self.stat_range)
@@ -180,17 +184,27 @@ class Coach(object):
                 if (self.train_count + 1) % POLICY_NET_SAVE_INTERVAL == 0:
                     self._save_policy_net()
 
+                if (self.train_count + 1) % TARGET_NET_UPDATE_INTERVAL == 0:
+                    self.target_net_update_count += 1
+                    self.q_learning.update_target_net()
+
                 t3 = time.time()
 
                 if (self.episode_count - last_report) >= 100:
                     last_report = self.episode_count
-
+                    # print('Coach gc_isenable()=%s count=%s' % (gc.isenabled(), gc.get_count()))
+                    # gc.collect()
+                    # t0 = time.time()
+                    # n = gc.collect()
+                    # t1 = time.time()
+                    # print('coach gc done: [%d] time=%f' % (n, (t1 - t0)))
                     print(
-                        '\n[%s] Coach stat: episode=%d train=%d record_ep=%d t_step=%d avg_time=%.2f avg_step=%.2f avg_score=%.2f avg_reward=%.3f' % (
+                        '\n[%s] Coach stat: episode=%d record_ep=%d train=%d trg_net_count=%d t_step=%d avg_time=%.2f avg_step=%.2f avg_score=%.2f avg_reward=%.3f' % (
                             time.strftime("%Y-%m-%d %H:%M:%S"),
                             self.episode_count,
-                            self.train_count,
                             self.record_ep,
+                            self.train_count,
+                            self.target_net_update_count,
                             self.step_count,
                             self.time_circe.avg(),
                             self.step_circe.avg(),

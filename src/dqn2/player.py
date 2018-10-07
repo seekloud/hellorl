@@ -11,6 +11,7 @@ from src.dqn2.judge import SharedScreen
 from src.dqn2.replay_buffer import ReplayBuffer
 from src.ztutils import CirceBuffer
 import traceback
+from pympler import tracker
 
 
 def start_player(play_id: int,
@@ -129,6 +130,7 @@ class Player(object):
         # begin, end, mark = 0, 0, 0
         # if ep_step >= 0:  # FIXED just for test.
         record = ep_score >= self.episode_score_window.avg()
+        record = (not FILTER_EXPERIENCE) or record
         if record:
             experience = self.experience_recoder.pop_experience(self.player_id, self.episode_count)
             self.replay_buffer.add_experience(*experience)
@@ -161,6 +163,14 @@ class Player(object):
             try:
                 self.run_episode(random_operation=random_operation)
                 count += 1
+
+                # print('player[%d] gc_isenable()=%s count=%s' % (self.player_id, gc.isenabled(), gc.get_count()))
+                # gc.collect()
+                # t0 = time.time()
+                # n = gc.collect()
+                # t1 = time.time()
+                # print('player gc done: [%d] time=%f' % (n, (t1 - t0)))
+
 
                 # FIXED for test
                 # delay = self.rng.randint(1, 10)
@@ -235,6 +245,7 @@ class ExperienceRecorder(object):
         return experience
 
     def clean(self):
+
         self.images = None
         self.actions = []
         self.rewards = []
